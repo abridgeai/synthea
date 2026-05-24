@@ -78,6 +78,12 @@ public class CCDAExporterTest {
     XPathExpression vitalSignsSection = xpath.compile("/ClinicalDocument/component/structuredBody"
             + "/component/section/templateId[@root=\"2.16.840.1.113883.10.20.22.2.4.1\"]");
     sectionExpressions.put("Vital Signs Section", vitalSignsSection);
+    XPathExpression vitalSignsOrganizerInterval = xpath.compile(
+        "/ClinicalDocument/component/structuredBody/component/section"
+        + "/templateId[@root=\"2.16.840.1.113883.10.20.22.2.4.1\"]"
+        + "/../entry/organizer/templateId[@root=\"2.16.840.1.113883.10.20.22.4.26\"]"
+        + "/../effectiveTime/low/../high");
+    sectionExpressions.put("Vital Signs Organizer Interval", vitalSignsOrganizerInterval);
   }
 
   @Test

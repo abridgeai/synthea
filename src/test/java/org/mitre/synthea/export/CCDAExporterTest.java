@@ -1,6 +1,7 @@
 package org.mitre.synthea.export;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.File;
 import java.io.InputStream;
@@ -153,6 +154,21 @@ public class CCDAExporterTest {
     } else {
       System.out.println("There were no people generated that have wellness providers... odd.");
     }
+  }
+
+  @Test
+  public void testExportDoesNotCreateMaxValueCoverageStopTime() throws Exception {
+    PayerManager.clear();
+    PayerManager.loadPayers(new Location(Generator.DEFAULT_STATE, null));
+    TestHelper.loadTestProperties();
+    Person toExport = TestHelper.getGeneratedPeople()[0];
+    long exportTime = System.currentTimeMillis();
+    toExport.coverage.getLastPlanRecord().updateStopTime(exportTime - 1);
+
+    CCDAExporter.export(toExport, exportTime);
+
+    assertFalse(toExport.coverage.getPlanHistory().stream()
+        .anyMatch(planRecord -> planRecord.getStopTime() == Long.MAX_VALUE));
   }
 
   @Ignore("Manual test to debug failed CCDA exports.")

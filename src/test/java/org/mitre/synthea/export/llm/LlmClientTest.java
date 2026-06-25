@@ -22,9 +22,10 @@ public class LlmClientTest {
   private Path cacheDir;
 
   private static final String SUCCESS_BODY =
-      "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"Generated note.\"}}]}";
+      "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"Generated note.\"}}],"
+      + "\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}";
 
-  /** Start a mock server and point the LLM config at it before each test. */
+  /** Start a mock server, point the LLM config at it, and reset usage counters before each test. */
   @Before
   public void setup() throws Exception {
     server = new MockWebServer();
@@ -33,9 +34,9 @@ public class LlmClientTest {
     Config.set("exporter.llm.api_key", "test-key");
     Config.set("exporter.llm.base_url", server.url("/v1").toString());
     Config.set("exporter.llm.model", "test-model");
-    Config.set("exporter.llm.temperature", "0");
     Config.set("exporter.llm.cache", "false");
     Config.set("exporter.llm.cache_dir", cacheDir.toString());
+    LlmClient.resetStats();
   }
 
   @After
@@ -50,7 +51,7 @@ public class LlmClientTest {
     LlmClient client = new LlmClient();
     assertTrue(client.isConfigured());
 
-    String result = client.complete("system prompt", "user prompt", 42);
+    String result = client.complete("system prompt", "user prompt");
     assertEquals("Generated note.", result);
 
     RecordedRequest request = server.takeRequest();
@@ -58,24 +59,33 @@ public class LlmClientTest {
     assertEquals("Bearer test-key", request.getHeader("Authorization"));
     String body = request.getBody().readUtf8();
     assertTrue(body.contains("\"model\":\"test-model\""));
-    assertTrue(body.contains("\"seed\":42"));
     assertTrue(body.contains("system prompt"));
     assertTrue(body.contains("user prompt"));
+    // temperature and seed are intentionally not sent.
+    assertTrue(!body.contains("temperature"));
+    assertTrue(!body.contains("seed"));
+
+    // Usage counters reflect the single call.
+    assertEquals(1, LlmClient.getApiCallCount());
+    assertEquals(10, LlmClient.getPromptTokens());
+    assertEquals(5, LlmClient.getCompletionTokens());
+    assertEquals(15, LlmClient.getTotalTokens());
   }
 
   @Test
-  public void cacheAvoidsSecondRequest() throws Exception {
+  public void cacheAvoidsSecondRequestAndIsNotCounted() throws Exception {
     Config.set("exporter.llm.cache", "true");
     server.enqueue(new MockResponse().setBody(SUCCESS_BODY));
 
     LlmClient client = new LlmClient();
-    String first = client.complete("sys", "user", 7);
-    String second = client.complete("sys", "user", 7);
+    String first = client.complete("sys", "user");
+    String second = client.complete("sys", "user");
 
     assertEquals("Generated note.", first);
     assertEquals("Generated note.", second);
-    // Only one HTTP request should have been made; the second was served from cache.
+    // Only one HTTP request was made; the cache hit is not counted as an API call.
     assertEquals(1, server.getRequestCount());
+    assertEquals(1, LlmClient.getApiCallCount());
   }
 
   @Test
@@ -93,7 +103,9 @@ public class LlmClientTest {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":\"bad\"}"));
 
     LlmClient client = new LlmClient();
-    String result = client.complete("sys", "user", 1);
+    String result = client.complete("sys", "user");
     assertNull(result);
+    // A failed request is not counted as a successful API call.
+    assertEquals(0, LlmClient.getApiCallCount());
   }
 }

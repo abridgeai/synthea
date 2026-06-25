@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -28,20 +29,26 @@ import org.mitre.synthea.helpers.Config;
  * the {@code exporter.llm.api_key} config property. The key is never read from the committed
  * {@code synthea.properties}; keep it in the environment or a local, git-ignored properties file.
  *
- * <p>Responses are cached on disk (keyed by a hash of model + temperature + seed + prompts) so
- * re-running a simulation with the same seed does not re-incur API cost and produces stable
- * output. Requests use {@code temperature=0} and a deterministic {@code seed} by default to keep
- * generation as reproducible as the provider allows.
+ * <p>Responses are cached on disk (keyed by a hash of model + prompts) so re-running a simulation
+ * with identical prompts does not re-incur API cost. Requests send no {@code temperature} or
+ * {@code seed}, so the provider's natural (non-deterministic) variation is preserved.
+ *
+ * <p>API call and token-usage counts are tracked in static counters across all instances for the
+ * duration of a run, and reported by {@link LlmStatsExporter} after generation completes.
  */
 public class LlmClient {
 
   private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
   private static final int MAX_RETRIES = 4;
 
+  private static final AtomicLong API_CALLS = new AtomicLong();
+  private static final AtomicLong PROMPT_TOKENS = new AtomicLong();
+  private static final AtomicLong COMPLETION_TOKENS = new AtomicLong();
+  private static final AtomicLong TOTAL_TOKENS = new AtomicLong();
+
   private final String apiKey;
   private final String baseUrl;
   private final String model;
-  private final double temperature;
   private final boolean cacheEnabled;
   private final Path cacheDir;
   private final OkHttpClient http;
@@ -57,7 +64,6 @@ public class LlmClient {
     this.baseUrl = stripTrailingSlash(
         Config.get("exporter.llm.base_url", "https://api.openai.com/v1"));
     this.model = Config.get("exporter.llm.model", "gpt-4o");
-    this.temperature = Config.getAsDouble("exporter.llm.temperature", 0.0);
     this.cacheEnabled = Config.getAsBoolean("exporter.llm.cache", true);
     this.cacheDir = Paths.get(Config.get("exporter.llm.cache_dir", "./output/llm_cache"));
     long timeout = Config.getAsLong("exporter.llm.timeout_seconds", 120);
@@ -83,12 +89,10 @@ public class LlmClient {
    *
    * @param systemPrompt instructions describing the role/output
    * @param userPrompt   the structured encounter content
-   * @param seed         deterministic seed for the request (provider best-effort)
    * @return the generated text, or null if the request failed after retries
    */
-  public String complete(String systemPrompt, String userPrompt, int seed) {
-    String cacheKey = hash(model + "\n" + temperature + "\n" + seed + "\n"
-        + systemPrompt + "\n" + userPrompt);
+  public String complete(String systemPrompt, String userPrompt) {
+    String cacheKey = hash(model + "\n" + systemPrompt + "\n" + userPrompt);
     String cached = readCache(cacheKey);
     if (cached != null) {
       return cached;
@@ -100,8 +104,6 @@ public class LlmClient {
 
     JsonObject payload = new JsonObject();
     payload.addProperty("model", model);
-    payload.addProperty("temperature", temperature);
-    payload.addProperty("seed", seed);
     payload.add("messages", messages);
 
     String result = requestWithRetries(payload.toString());
@@ -109,6 +111,34 @@ public class LlmClient {
       writeCache(cacheKey, result);
     }
     return result;
+  }
+
+  /** Total successful API calls made this run (cache hits are not counted). */
+  public static long getApiCallCount() {
+    return API_CALLS.get();
+  }
+
+  /** Total prompt (input) tokens reported by the API this run. */
+  public static long getPromptTokens() {
+    return PROMPT_TOKENS.get();
+  }
+
+  /** Total completion (output) tokens reported by the API this run. */
+  public static long getCompletionTokens() {
+    return COMPLETION_TOKENS.get();
+  }
+
+  /** Total tokens reported by the API this run. */
+  public static long getTotalTokens() {
+    return TOTAL_TOKENS.get();
+  }
+
+  /** Reset the run-level API call and token counters. */
+  public static void resetStats() {
+    API_CALLS.set(0);
+    PROMPT_TOKENS.set(0);
+    COMPLETION_TOKENS.set(0);
+    TOTAL_TOKENS.set(0);
   }
 
   private String requestWithRetries(String body) {
@@ -121,7 +151,10 @@ public class LlmClient {
           .build();
       try (Response response = http.newCall(request).execute()) {
         if (response.isSuccessful() && response.body() != null) {
-          return parseContent(response.body().string());
+          String responseBody = response.body().string();
+          API_CALLS.incrementAndGet();
+          recordUsage(responseBody);
+          return parseContent(responseBody);
         }
         // Retry on rate limiting and transient server errors; fail fast otherwise.
         if (response.code() != 429 && response.code() < 500) {
@@ -155,6 +188,28 @@ public class LlmClient {
     return choices.get(0).getAsJsonObject()
         .getAsJsonObject("message")
         .get("content").getAsString();
+  }
+
+  /**
+   * Parse the {@code usage} object (if present) and add its token counts to the run totals.
+   */
+  private static void recordUsage(String responseBody) {
+    try {
+      JsonObject root = JsonParser.parseString(responseBody).getAsJsonObject();
+      if (!root.has("usage") || root.get("usage").isJsonNull()) {
+        return;
+      }
+      JsonObject usage = root.getAsJsonObject("usage");
+      PROMPT_TOKENS.addAndGet(longField(usage, "prompt_tokens"));
+      COMPLETION_TOKENS.addAndGet(longField(usage, "completion_tokens"));
+      TOTAL_TOKENS.addAndGet(longField(usage, "total_tokens"));
+    } catch (RuntimeException e) {
+      // Usage accounting is best-effort and must never disrupt generation.
+    }
+  }
+
+  private static long longField(JsonObject obj, String field) {
+    return (obj.has(field) && !obj.get(field).isJsonNull()) ? obj.get(field).getAsLong() : 0L;
   }
 
   private static void backoff(int attempt) {

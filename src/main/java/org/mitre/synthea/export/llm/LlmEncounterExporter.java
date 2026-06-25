@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mitre.synthea.export.Exporter;
@@ -101,8 +100,7 @@ public abstract class LlmEncounterExporter implements PatientExporter {
       if (structured == null || structured.isBlank()) {
         continue;
       }
-      int seed = Math.abs(Objects.hash(person.attributes.get(Person.ID), encounter.start));
-      String generated = client.complete(systemPrompt(), structured, seed);
+      String generated = client.complete(systemPrompt(), structured);
       if (generated != null) {
         write(person, i, generated);
       }

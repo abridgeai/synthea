@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.mitre.synthea.export.ClinicalNoteExporter;
 import org.mitre.synthea.export.Exporter;
 import org.mitre.synthea.export.Exporter.ExporterRuntimeOptions;
 import org.mitre.synthea.export.PatientExporter;
@@ -22,9 +21,10 @@ import org.mitre.synthea.world.concepts.HealthRecord.Encounter;
  * the generated free text to disk. Subclasses supply the enable flag, system prompt, output
  * folder, and filename tag.
  *
- * <p>The structured input is the rendered output of {@link ClinicalNoteExporter}, which already
- * assembles demographics, active conditions/medications/allergies, and the encounter's findings.
- * This keeps both LLM exporters working from the same foundation as the built-in note exporter.
+ * <p>The structured input is the labeled-delta summary produced by {@link EncounterDeltaContext},
+ * which partitions the record into the state active coming into the encounter and the
+ * deterministic changes made at it (medications started/continued/stopped, problems new/resolved,
+ * orders placed). Both LLM exporters work from this same foundation.
  *
  * <p>To bound cost, generation is limited to a sampled subset of patients
  * ({@code exporter.llm.sample_size}) and to the most recent encounters per patient
@@ -97,7 +97,7 @@ public abstract class LlmEncounterExporter implements PatientExporter {
 
     for (int i = start; i < encounters.size(); i++) {
       Encounter encounter = encounters.get(i);
-      String structured = ClinicalNoteExporter.export(person, encounter);
+      String structured = EncounterDeltaContext.build(person, encounter);
       if (structured == null || structured.isBlank()) {
         continue;
       }

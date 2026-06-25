@@ -25,18 +25,15 @@ import org.mitre.synthea.world.concepts.HealthRecord.Encounter;
  * deterministic changes made at it (medications started/continued/stopped, problems new/resolved,
  * orders placed). Both LLM exporters work from this same foundation.
  *
- * <p>To bound cost, generation is limited to a sampled subset of patients
- * ({@code exporter.llm.sample_size}) and to the most recent encounters per patient
- * ({@code exporter.llm.max_encounters_per_patient}). The sample is a bounded count, not a fixed
- * set of patients, because patients are exported across multiple threads.
+ * <p>When enabled, this generates a note/transcript for every encounter of every exported
+ * patient. There is no sampling cap: the volume of LLM calls is determined by the population size
+ * ({@code -p}) and each patient's encounter count, so control cost via the number of patients
+ * generated.
  */
 public abstract class LlmEncounterExporter implements PatientExporter {
 
   /** Shared client; constructed lazily so configuration is read after startup. */
   private static volatile LlmClient sharedClient;
-
-  /** Bounded count of patients sampled for this exporter instance. */
-  private final AtomicInteger sampledPatients = new AtomicInteger(0);
 
   /** Whether we have already warned about a missing API key (warn once, not per patient). */
   private final AtomicInteger missingKeyWarned = new AtomicInteger(0);
@@ -85,16 +82,8 @@ public abstract class LlmEncounterExporter implements PatientExporter {
       return;
     }
 
-    int sampleSize = Config.getAsInteger("exporter.llm.sample_size", 10);
-    if (sampleSize > 0 && sampledPatients.incrementAndGet() > sampleSize) {
-      return;
-    }
-
-    int maxEncounters = Config.getAsInteger("exporter.llm.max_encounters_per_patient", 5);
     List<Encounter> encounters = person.record.encounters;
-    int start = (maxEncounters > 0) ? Math.max(0, encounters.size() - maxEncounters) : 0;
-
-    for (int i = start; i < encounters.size(); i++) {
+    for (int i = 0; i < encounters.size(); i++) {
       Encounter encounter = encounters.get(i);
       String structured = EncounterDeltaContext.build(person, encounter);
       if (structured == null || structured.isBlank()) {

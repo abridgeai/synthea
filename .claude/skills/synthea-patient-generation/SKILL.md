@@ -114,12 +114,11 @@ record.
 | `exporter.llm.base_url` | API base; **region-locked keys need `https://us.api.openai.com/v1`** |
 | `exporter.llm.model` | model id |
 | `exporter.llm.cache` / `exporter.llm.cache_dir` | response cache (default `./output/llm_cache`) |
-| `exporter.llm.sample_size` | cap patients (≤0 = all) — bounds cost |
-| `exporter.llm.max_encounters_per_patient` | cap encounters per patient (most recent N; 0 = all) |
 
-Sampling lives only in the exporter; the FHIR injector embeds whatever `.txt` files exist, so a
-partially-sampled run yields a **mixed bundle** (LLM notes for sampled encounters, template notes
-for the rest).
+There is **no sampling cap**: when enabled, a note/transcript is generated for **every encounter
+of every exported patient**, so total LLM volume = patients (`-p`) × their encounters × 2. Control
+cost by the number of patients generated. The FHIR injector therefore replaces the template note
+in **every** encounter's `DiagnosticReport`/`DocumentReference`.
 
 **Cost & cache notes:** the cache makes re-runs with identical prompts free. Changing the model
 **or the prompt** invalidates the cache → fresh API calls. Same seed + same data = cache hits.

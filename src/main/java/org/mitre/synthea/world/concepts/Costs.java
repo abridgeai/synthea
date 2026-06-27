@@ -151,6 +151,9 @@ public class Costs {
       return 0.0;
     }
 
+    if (entry.codes.isEmpty()) {
+      return 0.0;
+    }
     String code = entry.codes.get(0).code;
     // Retrieve the base cost based on the code.
     double baseCost;

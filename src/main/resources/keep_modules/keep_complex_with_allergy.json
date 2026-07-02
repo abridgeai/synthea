@@ -1,0 +1,497 @@
+{
+  "name": "Keep complex patients with an allergy",
+  "remarks": [
+    "Keeps only patients who have at least one of several chronic conditions",
+    "(diabetes, COPD, chronic heart failure, or chronic kidney disease/ESRD)",
+    "AND at least one recorded allergy (any food, drug, or environmental allergen).",
+    "Used via: run_synthea -k <path to this file>"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "name": "Initial",
+      "conditional_transition": [
+        {
+          "transition": "Keep",
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "44054006",
+                        "display": "Diabetes"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "87433001",
+                        "display": "Pulmonary emphysema (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "185086009",
+                        "display": "Chronic obstructive bronchitis (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "88805009",
+                        "display": "Chronic congestive heart failure (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "431855005",
+                        "display": "Chronic kidney disease stage 1 (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "431856006",
+                        "display": "Chronic kidney disease stage 2 (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "433144002",
+                        "display": "Chronic kidney disease stage 3 (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "431857002",
+                        "display": "Chronic kidney disease stage 4 (disorder)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Condition",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "46177005",
+                        "display": "End-stage renal disease (disorder)"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "782576004",
+                        "display": "Tree pollen (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "256277009",
+                        "display": "Grass pollen (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "264287008",
+                        "display": "Animal dander (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "260147004",
+                        "display": "House dust mite (organism)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "84489001",
+                        "display": "Mold (organism)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "288328004",
+                        "display": "Bee venom (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "111088007",
+                        "display": "Latex (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "762952008",
+                        "display": "Peanut (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "442571000124108",
+                        "display": "Tree nut (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "735971005",
+                        "display": "Fish (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "735029006",
+                        "display": "Shellfish (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "412071004",
+                        "display": "Wheat (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "102263004",
+                        "display": "Eggs (edible) (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "256355007",
+                        "display": "Glycine max (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "SNOMED-CT",
+                        "code": "3718001",
+                        "display": "Cow's milk (substance)"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "7984",
+                        "display": "Penicillin V"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "1191",
+                        "display": "Aspirin"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "5640",
+                        "display": "Ibuprofen"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "10831",
+                        "display": "Sulfamethoxazole / Trimethoprim"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "25037",
+                        "display": "cefdinir"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "25033",
+                        "display": "Cefixime"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "20489",
+                        "display": "cefpodoxime"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2191",
+                        "display": "Ceftazidime"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2193",
+                        "display": "Ceftriaxone"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2180",
+                        "display": "Cefazolin"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2231",
+                        "display": "Cephalexin"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2176",
+                        "display": "Cefaclor"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "20481",
+                        "display": "cefepime"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2189",
+                        "display": "Cefoxitin"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "2194",
+                        "display": "Cefuroxime"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "29046",
+                        "display": "Lisinopril"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "1998",
+                        "display": "Captopril"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "3827",
+                        "display": "Enalapril"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "18867",
+                        "display": "benazepril"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "35208",
+                        "display": "quinapril"
+                      }
+                    ]
+                  },
+                  {
+                    "condition_type": "Active Allergy",
+                    "codes": [
+                      {
+                        "system": "RxNorm",
+                        "code": "35296",
+                        "display": "Ramipril"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal",
+      "name": "Terminal"
+    },
+    "Keep": {
+      "type": "Terminal",
+      "name": "Keep"
+    }
+  },
+  "gmf_version": 2
+}

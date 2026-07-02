@@ -75,6 +75,7 @@
     },
     "Migraine_Onset": {
       "type": "ConditionOnset",
+      "assign_to_attribute": "migraine",
       "target_encounter": "Migraine_Diagnosis_Encounter",
       "codes": [
         {
@@ -87,12 +88,14 @@
     },
     "Set_Migraine_Attribute": {
       "type": "SetAttribute",
-      "attribute": "migraine",
+      "attribute": "migraine_diagnosed",
       "value": true,
       "remarks": [
-        "Boolean flag so other modules can key off this condition. Note: the opioid ",
-        "prescribing module assigns its transformed-migraine condition to an attribute ",
-        "of the same name; that attribute is write-only in that module, so both remain truthy."
+        "Boolean flag so other modules can cheaply key off this condition. The condition ",
+        "Entry itself is assigned to the 'migraine' attribute at onset, matching the ",
+        "convention used by the opioid prescribing module (which assigns its ",
+        "transformed-migraine condition to the same attribute), so 'migraine' consistently ",
+        "holds an Entry and never a boolean."
       ],
       "direct_transition": "Headache_Symptom"
     },

@@ -129,7 +129,7 @@
     },
     "Hyperlipidemia_Onset": {
       "type": "ConditionOnset",
-      "assign_to_attribute": "hyperlipidemia_condition",
+      "assign_to_attribute": "hyperlipidemia",
       "target_encounter": "Wellness_Diagnosis_Encounter",
       "codes": [
         {
@@ -142,14 +142,14 @@
     },
     "Set_Hyperlipidemia_Flag": {
       "type": "SetAttribute",
-      "attribute": "hyperlipidemia",
+      "attribute": "hyperlipidemia_diagnosed",
       "value": true,
       "direct_transition": "Wellness_Diagnosis_Encounter"
     },
     "Wellness_Diagnosis_Encounter": {
       "type": "Encounter",
       "wellness": true,
-      "reason": "hyperlipidemia_condition",
+      "reason": "hyperlipidemia",
       "remarks": [
         "Hyperlipidemia is asymptomatic; it is detected via a lipid panel at the next ",
         "scheduled wellness encounter."
@@ -231,7 +231,7 @@
     },
     "Hyperlipidemia_CarePlan": {
       "type": "CarePlanStart",
-      "reason": "hyperlipidemia_condition",
+      "reason": "hyperlipidemia",
       "codes": [
         {
           "system": "SNOMED-CT",
@@ -256,7 +256,7 @@
     "Initial_Statin_Order": {
       "type": "MedicationOrder",
       "assign_to_attribute": "statin_hyperlipidemia",
-      "reason": "hyperlipidemia_condition",
+      "reason": "hyperlipidemia",
       "codes": [
         {
           "system": "RxNorm",
@@ -300,7 +300,7 @@
     "Monitoring_Encounter": {
       "type": "Encounter",
       "encounter_class": "ambulatory",
-      "reason": "hyperlipidemia_condition",
+      "reason": "hyperlipidemia",
       "telemedicine_possibility": "possible",
       "codes": [
         {
@@ -422,7 +422,7 @@
     "Statin_Renewal": {
       "type": "MedicationOrder",
       "assign_to_attribute": "statin_hyperlipidemia",
-      "reason": "hyperlipidemia_condition",
+      "reason": "hyperlipidemia",
       "codes": [
         {
           "system": "RxNorm",
@@ -476,7 +476,7 @@
     "Restart_Statin": {
       "type": "MedicationOrder",
       "assign_to_attribute": "statin_hyperlipidemia",
-      "reason": "hyperlipidemia_condition",
+      "reason": "hyperlipidemia",
       "codes": [
         {
           "system": "RxNorm",

@@ -1,0 +1,676 @@
+{
+  "name": "Pneumonia",
+  "remarks": [
+    "Community-acquired pneumonia (CAP) in adults, modeled as recurring acute episodes across the lifetime.",
+    "Incidence: the EPIC study (Jain et al., NEJM 2015, https://www.nejm.org/doi/full/10.1056/NEJMoa1500245) found ",
+    "an annual incidence of hospitalized CAP of ~24.8 cases per 10,000 adults, rising to ~63/10,000 for ages 65-79 ",
+    "and ~164/10,000 for ages 80+. Including outpatient-treated CAP, overall adult incidence is roughly 0.3-0.5% ",
+    "per year in healthy adults and several-fold higher in the elderly.",
+    "Risk factors: COPD, smoking, congestive heart failure, and diabetes each substantially increase CAP risk ",
+    "(Torres et al., Thorax 2013, https://thorax.bmj.com/content/68/11/1057). This module raises incidence for ",
+    "patients with the 'smoker', 'diabetes', 'copd_variant', or 'chf' attributes set by other modules.",
+    "Treatment setting: roughly 75-80% of CAP episodes overall are managed as outpatients, but elderly patients ",
+    "are admitted much more often. Inpatient CAP mortality is ~5-15% in the elderly ",
+    "(https://www.cdc.gov/pneumonia/index.html). This module uses ~8% mortality for inpatient episodes at age 65+ ",
+    "and ~2% for younger inpatients.",
+    "Monthly incidence probabilities used below: healthy adult <65: 0.0003/month (~0.36%/yr); comorbid <65: ",
+    "0.001/month (~1.2%/yr); healthy 65+: 0.0013/month (~1.5%/yr); comorbid 65+: 0.0025/month (~3%/yr).",
+    "All clinical codes are reused from existing Synthea modules (covid19, bronchitis, sinusitis, sore_throat, ",
+    "uti submodules)."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Adult_Guard"
+    },
+    "Adult_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 18,
+        "unit": "years"
+      },
+      "direct_transition": "Wait_For_Pneumonia"
+    },
+    "Wait_For_Pneumonia": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "remarks": [
+        "Age- and comorbidity-dependent monthly probability of developing CAP.",
+        "Attribute names verified against existing modules: smoker (lifecycle), diabetes (metabolic syndrome), ",
+        "copd_variant (copd.json), chf (congestive_heart_failure.json)."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Age",
+                "operator": ">=",
+                "quantity": 65,
+                "unit": "years"
+              },
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "smoker",
+                    "operator": "==",
+                    "value": true
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "diabetes",
+                    "operator": "==",
+                    "value": true
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "copd_variant",
+                    "operator": "is not nil"
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "chf",
+                    "operator": "is not nil"
+                  }
+                ]
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "distribution": 0.0025,
+              "transition": "Pneumonia_Symptom_Cough"
+            },
+            {
+              "distribution": 0.9975,
+              "transition": "Wait_For_Pneumonia"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 65,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.0013,
+              "transition": "Pneumonia_Symptom_Cough"
+            },
+            {
+              "distribution": 0.9987,
+              "transition": "Wait_For_Pneumonia"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "smoker",
+                "operator": "==",
+                "value": true
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "==",
+                "value": true
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "copd_variant",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "chf",
+                "operator": "is not nil"
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "distribution": 0.001,
+              "transition": "Pneumonia_Symptom_Cough"
+            },
+            {
+              "distribution": 0.999,
+              "transition": "Wait_For_Pneumonia"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.0003,
+              "transition": "Pneumonia_Symptom_Cough"
+            },
+            {
+              "distribution": 0.9997,
+              "transition": "Wait_For_Pneumonia"
+            }
+          ]
+        }
+      ]
+    },
+    "Pneumonia_Symptom_Cough": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Pneumonia_Symptom_Fever"
+    },
+    "Pneumonia_Symptom_Fever": {
+      "type": "Symptom",
+      "symptom": "Fever",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Pneumonia_Symptom_Dyspnea"
+    },
+    "Pneumonia_Symptom_Dyspnea": {
+      "type": "Symptom",
+      "symptom": "Shortness of Breath",
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "Symptoms_Worsen"
+    },
+    "Symptoms_Worsen": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 4,
+        "unit": "days"
+      },
+      "direct_transition": "Care_Seeking"
+    },
+    "Care_Seeking": {
+      "type": "Simple",
+      "remarks": [
+        "Elderly patients present to the emergency department much more often than younger adults."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 65,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.55,
+              "transition": "Pneumonia_Dx_Ambulatory"
+            },
+            {
+              "distribution": 0.45,
+              "transition": "Pneumonia_Dx_ED"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.85,
+              "transition": "Pneumonia_Dx_Ambulatory"
+            },
+            {
+              "distribution": 0.15,
+              "transition": "Pneumonia_Dx_ED"
+            }
+          ]
+        }
+      ]
+    },
+    "Pneumonia_Dx_Ambulatory": {
+      "type": "ConditionOnset",
+      "target_encounter": "Pneumonia_Ambulatory_Encounter",
+      "assign_to_attribute": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "233604007",
+          "display": "Pneumonia (disorder)"
+        }
+      ],
+      "direct_transition": "Pneumonia_Ambulatory_Encounter"
+    },
+    "Pneumonia_Ambulatory_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Chest_Xray_Ambulatory"
+    },
+    "Chest_Xray_Ambulatory": {
+      "type": "Procedure",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "399208008",
+          "display": "Plain X-ray of chest (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 10,
+        "high": 25,
+        "unit": "minutes"
+      },
+      "direct_transition": "Take_Temperature"
+    },
+    "Take_Temperature": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "Cel",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8310-5",
+          "display": "Body temperature"
+        }
+      ],
+      "range": {
+        "low": 38,
+        "high": 39.5
+      },
+      "direct_transition": "Oral_Antibiotic_Choice"
+    },
+    "Oral_Antibiotic_Choice": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.5,
+          "transition": "Prescribe_Amoxicillin_Clavulanate"
+        },
+        {
+          "distribution": 0.3,
+          "transition": "Prescribe_Azithromycin"
+        },
+        {
+          "distribution": 0.2,
+          "transition": "Prescribe_Doxycycline"
+        }
+      ]
+    },
+    "Prescribe_Amoxicillin_Clavulanate": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cap_antibiotic",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "562251",
+          "display": "Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Ambulatory_Encounter"
+    },
+    "Prescribe_Azithromycin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cap_antibiotic",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "212446",
+          "display": "azithromycin 250 MG Oral Tablet [Zithromax]"
+        }
+      ],
+      "direct_transition": "End_Ambulatory_Encounter"
+    },
+    "Prescribe_Doxycycline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cap_antibiotic",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1649987",
+          "display": "doxycycline hyclate 100 MG"
+        }
+      ],
+      "direct_transition": "End_Ambulatory_Encounter"
+    },
+    "End_Ambulatory_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Outpatient_Antibiotic_Course"
+    },
+    "Outpatient_Antibiotic_Course": {
+      "type": "Delay",
+      "range": {
+        "low": 5,
+        "high": 7,
+        "unit": "days"
+      },
+      "direct_transition": "End_Oral_Antibiotic"
+    },
+    "End_Oral_Antibiotic": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "cap_antibiotic",
+      "remarks": [
+        "~6% of outpatient-treated CAP fails oral therapy and requires hospital admission."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.94,
+          "transition": "Pneumonia_Resolves"
+        },
+        {
+          "distribution": 0.06,
+          "transition": "Outpatient_Treatment_Failure"
+        }
+      ]
+    },
+    "Outpatient_Treatment_Failure": {
+      "type": "Simple",
+      "direct_transition": "Pneumonia_Inpatient_Encounter"
+    },
+    "Pneumonia_Dx_ED": {
+      "type": "ConditionOnset",
+      "target_encounter": "Pneumonia_ED_Encounter",
+      "assign_to_attribute": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "233604007",
+          "display": "Pneumonia (disorder)"
+        }
+      ],
+      "direct_transition": "Pneumonia_ED_Encounter"
+    },
+    "Pneumonia_ED_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Chest_Xray_ED"
+    },
+    "Chest_Xray_ED": {
+      "type": "Procedure",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "399208008",
+          "display": "Plain X-ray of chest (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 10,
+        "high": 25,
+        "unit": "minutes"
+      },
+      "direct_transition": "ED_Oxygen_Saturation"
+    },
+    "ED_Oxygen_Saturation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "%",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2708-6",
+          "display": "Oxygen saturation in Arterial blood"
+        },
+        {
+          "system": "LOINC",
+          "code": "59408-5",
+          "display": "Oxygen saturation in Arterial blood by Pulse oximetry"
+        }
+      ],
+      "range": {
+        "low": 84,
+        "high": 95
+      },
+      "direct_transition": "ED_Disposition"
+    },
+    "ED_Disposition": {
+      "type": "Simple",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 65,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.7,
+              "transition": "End_ED_Encounter_Admit"
+            },
+            {
+              "distribution": 0.3,
+              "transition": "ED_Oral_Antibiotic"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.4,
+              "transition": "End_ED_Encounter_Admit"
+            },
+            {
+              "distribution": 0.6,
+              "transition": "ED_Oral_Antibiotic"
+            }
+          ]
+        }
+      ]
+    },
+    "ED_Oral_Antibiotic": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cap_antibiotic",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "562251",
+          "display": "Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_ED_Encounter_Discharge"
+    },
+    "End_ED_Encounter_Discharge": {
+      "type": "EncounterEnd",
+      "direct_transition": "Outpatient_Antibiotic_Course"
+    },
+    "End_ED_Encounter_Admit": {
+      "type": "EncounterEnd",
+      "direct_transition": "Pneumonia_Inpatient_Encounter"
+    },
+    "Pneumonia_Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "32485007",
+          "display": "Hospital admission (procedure)"
+        }
+      ],
+      "direct_transition": "IV_Antibiotic"
+    },
+    "IV_Antibiotic": {
+      "type": "MedicationOrder",
+      "reason": "cap_pneumonia",
+      "remarks": [
+        "IV ceftriaxone represents inpatient parenteral antibiotic therapy for CAP.",
+        "RxNorm code reused from uti/abx_tx.json."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1665021",
+          "display": "ceftriaxone 1000 MG Injection"
+        }
+      ],
+      "direct_transition": "Inpatient_Oxygen_Saturation"
+    },
+    "Inpatient_Oxygen_Saturation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "%",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2708-6",
+          "display": "Oxygen saturation in Arterial blood"
+        },
+        {
+          "system": "LOINC",
+          "code": "59408-5",
+          "display": "Oxygen saturation in Arterial blood by Pulse oximetry"
+        }
+      ],
+      "range": {
+        "low": 85,
+        "high": 93
+      },
+      "direct_transition": "Inpatient_Stay"
+    },
+    "Inpatient_Stay": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 7,
+        "unit": "days"
+      },
+      "remarks": [
+        "Inpatient CAP mortality: ~8% for patients 65+, ~2% for younger inpatients."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 65,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.92,
+              "transition": "Inpatient_Recovery"
+            },
+            {
+              "distribution": 0.08,
+              "transition": "Death_From_Pneumonia"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.98,
+              "transition": "Inpatient_Recovery"
+            },
+            {
+              "distribution": 0.02,
+              "transition": "Death_From_Pneumonia"
+            }
+          ]
+        }
+      ]
+    },
+    "Inpatient_Recovery": {
+      "type": "MedicationEnd",
+      "medication_order": "IV_Antibiotic",
+      "direct_transition": "Hospital_Discharge"
+    },
+    "Hospital_Discharge": {
+      "type": "EncounterEnd",
+      "direct_transition": "Convalescence"
+    },
+    "Convalescence": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 2,
+        "unit": "weeks"
+      },
+      "direct_transition": "Pneumonia_Resolves"
+    },
+    "Pneumonia_Resolves": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "cap_pneumonia",
+      "direct_transition": "Cough_Subsides"
+    },
+    "Cough_Subsides": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Fever_Subsides"
+    },
+    "Fever_Subsides": {
+      "type": "Symptom",
+      "symptom": "Fever",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Dyspnea_Subsides"
+    },
+    "Dyspnea_Subsides": {
+      "type": "Symptom",
+      "symptom": "Shortness of Breath",
+      "exact": {
+        "quantity": 0
+      },
+      "remarks": [
+        "Looping back allows recurrent pneumonia episodes across the lifetime."
+      ],
+      "direct_transition": "Wait_For_Pneumonia"
+    },
+    "Death_From_Pneumonia": {
+      "type": "Death",
+      "referenced_by_attribute": "cap_pneumonia",
+      "exact": {
+        "quantity": 1,
+        "unit": "days"
+      },
+      "direct_transition": "End_Encounter_By_Death"
+    },
+    "End_Encounter_By_Death": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

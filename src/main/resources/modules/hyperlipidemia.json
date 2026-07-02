@@ -1,0 +1,517 @@
+{
+  "name": "Hyperlipidemia",
+  "remarks": [
+    "General-population hyperlipidemia model. This module models diagnosis and chronic management ",
+    "of hyperlipidemia in NON-VETERAN adults. Veterans are excluded because the ",
+    "veteran_hyperlipidemia module already models hyperlipidemia in that population; ",
+    "gating on the 'veteran' attribute avoids double diagnosis.",
+    "",
+    "PREVALENCE: Per NHANES 2015-2018 data (AHA Heart Disease and Stroke Statistics, 2021 update, ",
+    "https://www.ahajournals.org/doi/10.1161/CIR.0000000000000950), roughly 38% of US adults have ",
+    "total cholesterol >= 200 mg/dL, and ~11-12% have total cholesterol >= 240 mg/dL. Prevalence ",
+    "rises with age, with onset predominantly after age 35. Among adults with diabetes, the ",
+    "prevalence of dyslipidemia is approximately 70% (ADA Standards of Medical Care in Diabetes). ",
+    "This module uses an annual onset hazard beginning at age 35 of 1.6% per year (cumulative ",
+    "~38% by age 65) and 4.5% per year for patients with the 'diabetes' attribute set by the ",
+    "metabolic_syndrome_disease module (cumulative ~75% by age 65).",
+    "",
+    "TREATMENT & NON-ADHERENCE: Diagnosis occurs opportunistically at a scheduled wellness ",
+    "encounter via a lipid panel. Treatment is a statin (atorvastatin 20 MG, the most commonly ",
+    "dispensed statin per MEPS data used by the medications/statin submodule) plus a diet and ",
+    "exercise care plan, with annual lipid monitoring. Statin discontinuation is very common: ",
+    "~25-50% of new statin users discontinue within the first year and many later restart ",
+    "(Vinogradova et al., BMJ 2016;353:i3305; Chodick et al., Clin Ther 2008). This module models ",
+    "a 15% annual discontinuation probability, with a 60% chance of restarting at each subsequent ",
+    "annual follow-up, producing realistic start/stop medication churn.",
+    "",
+    "ATTRIBUTES: sets 'hyperlipidemia' = true at onset (for cross-module correlation), ",
+    "'hyperlipidemia_condition' (the condition itself), 'statin_hyperlipidemia' (active statin), ",
+    "and 'hyperlipidemia_statin_stopped' (non-adherence flag).",
+    "",
+    "Condition, medication, lab, and care plan codes are reused from veteran_hyperlipidemia.json ",
+    "and medications/statin.json."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 35,
+        "unit": "years"
+      },
+      "direct_transition": "Eligibility_Check"
+    },
+    "Eligibility_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Veterans are modeled by veteran_hyperlipidemia.json; skip them here to avoid ",
+        "double diagnosis. Also skip anyone who already has hyperlipidemia."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "veteran",
+            "operator": "is not nil"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "hyperlipidemia",
+            "operator": "is not nil"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "transition": "Annual_Onset_Check"
+        }
+      ]
+    },
+    "Annual_Onset_Check": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "Annual onset hazard: 4.5% for patients with diabetes (dyslipidemia prevalence ~70% ",
+        "in diabetes), 1.6% otherwise (cumulative ~38% by age 65, consistent with NHANES). ",
+        "Adults who reach age 90 without hyperlipidemia exit the module."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 90,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "diabetes",
+            "operator": "==",
+            "value": true
+          },
+          "distributions": [
+            {
+              "distribution": 0.045,
+              "transition": "Hyperlipidemia_Onset"
+            },
+            {
+              "distribution": 0.955,
+              "transition": "Annual_Onset_Check"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.016,
+              "transition": "Hyperlipidemia_Onset"
+            },
+            {
+              "distribution": 0.984,
+              "transition": "Annual_Onset_Check"
+            }
+          ]
+        }
+      ]
+    },
+    "Hyperlipidemia_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "hyperlipidemia_condition",
+      "target_encounter": "Wellness_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "55822004",
+          "display": "Hyperlipidemia (disorder)"
+        }
+      ],
+      "direct_transition": "Set_Hyperlipidemia_Flag"
+    },
+    "Set_Hyperlipidemia_Flag": {
+      "type": "SetAttribute",
+      "attribute": "hyperlipidemia",
+      "value": true,
+      "direct_transition": "Wellness_Diagnosis_Encounter"
+    },
+    "Wellness_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "wellness": true,
+      "reason": "hyperlipidemia_condition",
+      "remarks": [
+        "Hyperlipidemia is asymptomatic; it is detected via a lipid panel at the next ",
+        "scheduled wellness encounter."
+      ],
+      "direct_transition": "Record_Diagnostic_Lipid_Panel"
+    },
+    "Record_Diagnostic_Lipid_Panel": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "57698-3",
+          "display": "Lipid panel with direct LDL - Serum or Plasma"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2093-3",
+              "display": "Cholesterol [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 205,
+            "high": 290
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2571-8",
+              "display": "Triglyceride [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 120,
+            "high": 350
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18262-6",
+              "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 130,
+            "high": 200
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2085-9",
+              "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 25,
+            "high": 60
+          }
+        }
+      ],
+      "direct_transition": "Hyperlipidemia_CarePlan"
+    },
+    "Hyperlipidemia_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "hyperlipidemia_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "736285004",
+          "display": "Hyperlipidemia clinical management plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "183063000",
+          "display": "Low salt diet education (procedure)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "183301007",
+          "display": "Physical exercises (regime/therapy)"
+        }
+      ],
+      "direct_transition": "Initial_Statin_Order"
+    },
+    "Initial_Statin_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "statin_hyperlipidemia",
+      "reason": "hyperlipidemia_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "617310",
+          "display": "atorvastatin 20 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Set_Statin_Active"
+    },
+    "Set_Statin_Active": {
+      "type": "SetAttribute",
+      "attribute": "hyperlipidemia_statin_stopped",
+      "value": false,
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Annual_Monitoring_Delay"
+    },
+    "Annual_Monitoring_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 12,
+        "unit": "months"
+      },
+      "direct_transition": "Monitoring_Encounter"
+    },
+    "Monitoring_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "hyperlipidemia_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Record_Monitoring_Lipid_Panel"
+    },
+    "Record_Monitoring_Lipid_Panel": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "57698-3",
+          "display": "Lipid panel with direct LDL - Serum or Plasma"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2093-3",
+              "display": "Cholesterol [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 150,
+            "high": 220
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2571-8",
+              "display": "Triglyceride [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 90,
+            "high": 220
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18262-6",
+              "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 70,
+            "high": 150
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2085-9",
+              "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 30,
+            "high": 70
+          }
+        }
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "hyperlipidemia_statin_stopped",
+            "operator": "==",
+            "value": true
+          },
+          "transition": "Statin_Restart_Decision"
+        },
+        {
+          "transition": "Statin_Adherence_Decision"
+        }
+      ]
+    },
+    "Statin_Adherence_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Statin non-adherence: ~15% of patients on a statin discontinue each year ",
+        "(Vinogradova et al., BMJ 2016). The remainder renew the prescription."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "End_Statin_For_Renewal"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Discontinue_Statin"
+        }
+      ]
+    },
+    "End_Statin_For_Renewal": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "statin_hyperlipidemia",
+      "direct_transition": "Statin_Renewal"
+    },
+    "Statin_Renewal": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "statin_hyperlipidemia",
+      "reason": "hyperlipidemia_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "617310",
+          "display": "atorvastatin 20 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "End_Monitoring_Encounter"
+    },
+    "Discontinue_Statin": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "statin_hyperlipidemia",
+      "direct_transition": "Set_Statin_Stopped"
+    },
+    "Set_Statin_Stopped": {
+      "type": "SetAttribute",
+      "attribute": "hyperlipidemia_statin_stopped",
+      "value": true,
+      "direct_transition": "End_Monitoring_Encounter"
+    },
+    "Statin_Restart_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Many patients who stop a statin later restart it: 60% chance at each annual ",
+        "follow-up while off therapy."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.6,
+          "transition": "Restart_Statin"
+        },
+        {
+          "distribution": 0.4,
+          "transition": "End_Monitoring_Encounter"
+        }
+      ]
+    },
+    "Restart_Statin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "statin_hyperlipidemia",
+      "reason": "hyperlipidemia_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "617310",
+          "display": "atorvastatin 20 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Clear_Statin_Stopped"
+    },
+    "Clear_Statin_Stopped": {
+      "type": "SetAttribute",
+      "attribute": "hyperlipidemia_statin_stopped",
+      "value": false,
+      "direct_transition": "End_Monitoring_Encounter"
+    },
+    "End_Monitoring_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Annual_Monitoring_Delay"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

@@ -1,0 +1,573 @@
+{
+  "name": "DVT and Pulmonary Embolism",
+  "remarks": [
+    "Module for venous thromboembolism (VTE): deep venous thrombosis (DVT) and pulmonary embolism (PE).",
+    "Annual incidence of VTE is roughly 1-2 per 1,000 person-years overall, rising steeply with age: ",
+    "it is rare under age 40 (~1 per 10,000/yr) and approaches ~0.5-1% per year over age 75.",
+    "Sources: Silverstein et al., Arch Intern Med 1998 (Olmsted County); ",
+    "https://www.cdc.gov/blood-clots/data-research/facts-stats/ ; ",
+    "Heit JA, Nat Rev Cardiol 2015 (Epidemiology of venous thromboembolism).",
+    "About 25-30% of VTE episodes present as PE, which carries a case fatality of a few percent ",
+    "with modern treatment (Cohen et al., Thromb Haemost 2007).",
+    "Treatment is anticoagulation with a DOAC (apixaban, preferred since ~2014) or warfarin with ",
+    "periodic INR monitoring. Provoked VTE is treated for roughly 3-6 months; unprovoked or ",
+    "recurrent VTE often receives extended therapy (Kearon et al., CHEST 2016 guideline).",
+    "~10-12% of medication courses include a non-adherence branch where the patient stops early ",
+    "and may resume after a follow-up visit.",
+    "Recurrence after completing anticoagulation is ~10% within 1-5 years (higher for unprovoked VTE), ",
+    "modeled as a ~2%/yr hazard loop back into a new episode.",
+    "Sets attribute 'vte_history' = true at first episode so other modules can key off it.",
+    "Warfarin RxNorm 855332 and INR LOINC 6301-6 are reused from atrial_fibrillation.json and ",
+    "heart/cardiac_labs.json; D-dimer LOINC 48065-7 is reused from covid19/measurements_frequent.json."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 18,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_VTE_Risk"
+    },
+    "Annual_VTE_Risk": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "Age-banded annual incidence of first VTE, approximating Silverstein 1998 / Heit 2015:",
+        "  18-39: ~0.01%/yr, 40-59: ~0.1%/yr, 60-74: ~0.3%/yr, 75+: ~0.6%/yr."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": "<",
+            "quantity": 40,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.0001,
+              "transition": "VTE_Episode_Start"
+            },
+            {
+              "distribution": 0.9999,
+              "transition": "Annual_VTE_Risk"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": "<",
+            "quantity": 60,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.001,
+              "transition": "VTE_Episode_Start"
+            },
+            {
+              "distribution": 0.999,
+              "transition": "Annual_VTE_Risk"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": "<",
+            "quantity": 75,
+            "unit": "years"
+          },
+          "distributions": [
+            {
+              "distribution": 0.003,
+              "transition": "VTE_Episode_Start"
+            },
+            {
+              "distribution": 0.997,
+              "transition": "Annual_VTE_Risk"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.006,
+              "transition": "VTE_Episode_Start"
+            },
+            {
+              "distribution": 0.994,
+              "transition": "Annual_VTE_Risk"
+            }
+          ]
+        }
+      ]
+    },
+    "VTE_Episode_Start": {
+      "type": "Simple",
+      "remarks": [
+        "~72% of episodes present as DVT alone, ~28% as PE (Cohen 2007, White 2003)."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.72,
+          "transition": "DVT_Onset"
+        },
+        {
+          "distribution": 0.28,
+          "transition": "PE_Onset"
+        }
+      ]
+    },
+    "DVT_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "DVT_Encounter",
+      "assign_to_attribute": "vte_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "128053003",
+          "display": "Deep venous thrombosis (disorder)"
+        }
+      ],
+      "direct_transition": "DVT_Symptom_Leg_Pain"
+    },
+    "DVT_Symptom_Leg_Pain": {
+      "type": "Symptom",
+      "symptom": "Leg Pain",
+      "cause": "Deep venous thrombosis",
+      "range": {
+        "low": 30,
+        "high": 80
+      },
+      "direct_transition": "DVT_Symptom_Leg_Swelling"
+    },
+    "DVT_Symptom_Leg_Swelling": {
+      "type": "Symptom",
+      "symptom": "Leg Swelling",
+      "cause": "Deep venous thrombosis",
+      "range": {
+        "low": 30,
+        "high": 80
+      },
+      "direct_transition": "DVT_Encounter"
+    },
+    "DVT_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "DVT_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "DVT_D_Dimer"
+    },
+    "DVT_D_Dimer": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "ug/mL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "48065-7",
+          "display": "Fibrin D-dimer FEU [Mass/volume] in Platelet poor plasma"
+        }
+      ],
+      "range": {
+        "low": 1.5,
+        "high": 8
+      },
+      "direct_transition": "Venous_Ultrasound"
+    },
+    "Venous_Ultrasound": {
+      "type": "Procedure",
+      "reason": "DVT_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "312725000",
+          "display": "Duplex scan of lower limb veins (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 40,
+        "unit": "minutes"
+      },
+      "direct_transition": "Set_VTE_History"
+    },
+    "PE_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "PE_ED_Encounter",
+      "assign_to_attribute": "vte_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "59282003",
+          "display": "Pulmonary embolism (disorder)"
+        }
+      ],
+      "direct_transition": "PE_Symptom_Chest_Pain"
+    },
+    "PE_Symptom_Chest_Pain": {
+      "type": "Symptom",
+      "symptom": "Chest Pain",
+      "cause": "Pulmonary embolism",
+      "range": {
+        "low": 40,
+        "high": 90
+      },
+      "direct_transition": "PE_Symptom_Dyspnea"
+    },
+    "PE_Symptom_Dyspnea": {
+      "type": "Symptom",
+      "symptom": "Shortness of Breath",
+      "cause": "Pulmonary embolism",
+      "range": {
+        "low": 40,
+        "high": 90
+      },
+      "direct_transition": "PE_ED_Encounter"
+    },
+    "PE_ED_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "PE_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "PE_D_Dimer"
+    },
+    "PE_D_Dimer": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "ug/mL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "48065-7",
+          "display": "Fibrin D-dimer FEU [Mass/volume] in Platelet poor plasma"
+        }
+      ],
+      "range": {
+        "low": 2,
+        "high": 10
+      },
+      "direct_transition": "CT_Pulmonary_Angiography"
+    },
+    "CT_Pulmonary_Angiography": {
+      "type": "Procedure",
+      "reason": "PE_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "419225001",
+          "display": "Computed tomography angiography of pulmonary artery (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 45,
+        "unit": "minutes"
+      },
+      "direct_transition": "PE_ED_End"
+    },
+    "PE_ED_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "PE_Inpatient_Admission"
+    },
+    "PE_Inpatient_Admission": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "PE_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "PE_Inpatient_Stay"
+    },
+    "PE_Inpatient_Stay": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 7,
+        "unit": "days"
+      },
+      "remarks": [
+        "In-hospital case fatality of treated PE is a few percent; we use 3.5% ",
+        "(Cohen 2007; ICOPER registry reported higher all-comer mortality, modern treated cohorts lower)."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.035,
+          "transition": "PE_Death"
+        },
+        {
+          "distribution": 0.965,
+          "transition": "PE_Inpatient_End"
+        }
+      ]
+    },
+    "PE_Death": {
+      "type": "Death",
+      "condition_onset": "PE_Onset",
+      "direct_transition": "Terminal"
+    },
+    "PE_Inpatient_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Set_VTE_History"
+    },
+    "Set_VTE_History": {
+      "type": "SetAttribute",
+      "attribute": "vte_history",
+      "value": true,
+      "direct_transition": "Anticoagulant_Choice"
+    },
+    "Anticoagulant_Choice": {
+      "type": "Simple",
+      "remarks": [
+        "Apixaban was approved in 2012 and became a preferred agent for VTE by ~2014; ",
+        "before that, warfarin (with INR monitoring) is used."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 2014
+          },
+          "transition": "Warfarin_Order"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.7,
+              "transition": "Apixaban_Order"
+            },
+            {
+              "distribution": 0.3,
+              "transition": "Warfarin_Order"
+            }
+          ]
+        }
+      ]
+    },
+    "Apixaban_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "vte_anticoagulant",
+      "reason": "vte_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 1364445,
+          "display": "apixaban 5 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "Apixaban_Course"
+    },
+    "Apixaban_Course": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "remarks": [
+        "Monthly loop. 20%/month completion gives a mean course of ~5 months, spanning the ",
+        "3-6 month provoked course and longer extended therapy for some patients. ",
+        "4%/month non-adherence yields ~10-15% of courses with a discontinuation episode."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.2,
+          "transition": "Apixaban_Course_Complete"
+        },
+        {
+          "distribution": 0.04,
+          "transition": "Anticoagulant_Nonadherence"
+        },
+        {
+          "distribution": 0.76,
+          "transition": "Apixaban_Course"
+        }
+      ]
+    },
+    "Apixaban_Course_Complete": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "vte_anticoagulant",
+      "direct_transition": "Recurrence_Wait"
+    },
+    "Warfarin_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "vte_anticoagulant",
+      "reason": "vte_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 855332,
+          "display": "Warfarin Sodium 5 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "Warfarin_INR_Delay"
+    },
+    "Warfarin_INR_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "direct_transition": "INR_Monitoring_Encounter"
+    },
+    "INR_Monitoring_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "vte_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "INR_Observation"
+    },
+    "INR_Observation": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "{INR}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "6301-6",
+          "display": "INR in Platelet poor plasma by Coagulation assay"
+        }
+      ],
+      "range": {
+        "low": 1.5,
+        "high": 3.5
+      },
+      "direct_transition": "INR_Encounter_End"
+    },
+    "INR_Encounter_End": {
+      "type": "EncounterEnd",
+      "remarks": [
+        "18%/month completion gives a mean warfarin course of ~5-6 months; ",
+        "4%/month non-adherence branch."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.18,
+          "transition": "Warfarin_Course_Complete"
+        },
+        {
+          "distribution": 0.04,
+          "transition": "Anticoagulant_Nonadherence"
+        },
+        {
+          "distribution": 0.78,
+          "transition": "Warfarin_INR_Delay"
+        }
+      ]
+    },
+    "Warfarin_Course_Complete": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "vte_anticoagulant",
+      "direct_transition": "Recurrence_Wait"
+    },
+    "Anticoagulant_Nonadherence": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "vte_anticoagulant",
+      "remarks": [
+        "Patient stops anticoagulation early without medical guidance, then presents for a ",
+        "follow-up visit 1-4 months later where therapy is resumed."
+      ],
+      "direct_transition": "Nonadherence_Gap"
+    },
+    "Nonadherence_Gap": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 4,
+        "unit": "months"
+      },
+      "direct_transition": "Nonadherence_Followup"
+    },
+    "Nonadherence_Followup": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "vte_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Nonadherence_Followup_End"
+    },
+    "Nonadherence_Followup_End": {
+      "type": "EncounterEnd",
+      "remarks": [
+        "80% resume anticoagulation (same class as before, chosen by era); ",
+        "20% remain off therapy and move directly to the recurrence hazard."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.8,
+          "transition": "Anticoagulant_Choice"
+        },
+        {
+          "distribution": 0.2,
+          "transition": "Recurrence_Wait"
+        }
+      ]
+    },
+    "Recurrence_Wait": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "~2%/yr recurrence hazard after anticoagulation ends: roughly 10% recur within 5 years ",
+        "(Kearon 2016; Prandoni et al., Haematologica 2007 report up to ~25% at 5 yrs for ",
+        "unprovoked VTE, provoked much lower). Recurrent episodes re-enter the episode flow, ",
+        "which naturally extends anticoagulation exposure for recurrent patients."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.02,
+          "transition": "VTE_Episode_Start"
+        },
+        {
+          "distribution": 0.98,
+          "transition": "Recurrence_Wait"
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

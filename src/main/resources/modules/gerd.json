@@ -1,0 +1,546 @@
+{
+  "name": "GERD",
+  "remarks": [
+    "Gastroesophageal reflux disease (GERD) model.",
+    "",
+    "PREVALENCE: Systematic reviews estimate GERD prevalence in North America at ~18-28% of ",
+    "adults (El-Serag et al., Gut 2014;63:871-880). Onset can occur at any adult age. Obesity is ",
+    "an established risk factor (roughly 2x odds; Hampel et al., Ann Intern Med 2005;143:199-211). ",
+    "This module uses an annual onset hazard from age 18 of 0.4% per year for non-obese adults ",
+    "(cumulative ~18% by age 68) and 1.0% per year when the 'obesity' attribute is set by the ",
+    "wellness_encounters module (cumulative ~39% over 50 years), yielding overall adult ",
+    "prevalence in the ~20% range.",
+    "",
+    "FLOW: Heartburn/regurgitation symptoms lead to an ambulatory encounter where GERD is ",
+    "diagnosed, a lifestyle care plan is started (dietary modification, weight reduction), and a ",
+    "proton pump inhibitor (omeprazole 20 MG daily) is prescribed. ~15% of patients are ",
+    "refractory to initial PPI therapy and undergo upper GI endoscopy ",
+    "(esophagogastroduodenoscopy); ~5% of endoscoped patients are found to have Barrett's ",
+    "esophagus (consistent with 5-15% of patients endoscoped for reflux symptoms; Shaheen & ",
+    "Richter, Lancet 2009) and enter a 3-year surveillance endoscopy loop per ACG guidelines.",
+    "",
+    "NON-ADHERENCE: Many patients remain on long-term PPI therapy, but discontinuation is ",
+    "common. At each annual follow-up, 15% of patients on a PPI stop it; patients off therapy ",
+    "have a 50% chance of restarting at each subsequent follow-up (symptom relapse after PPI ",
+    "discontinuation occurs in the majority of GERD patients within a year).",
+    "",
+    "ATTRIBUTES: sets 'gerd' = true at onset (for cross-module correlation), 'gerd_condition' ",
+    "(the condition itself), 'gerd_ppi' (active PPI), 'gerd_ppi_stopped' (non-adherence flag), ",
+    "and 'barretts_condition' (Barrett's esophagus, when present). Reads 'obesity' (set by ",
+    "wellness_encounters.json).",
+    "",
+    "CODES: GERD 235595009 is reused from cerebral_palsy.json. Esophagogastroduodenoscopy ",
+    "76009000, Barrett's esophagus 302914006, and omeprazole RxNorm 198051 were verified ",
+    "against SNOMED CT (tx.fhir.org, Feb 2025 release) and RxNav."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Adult_Guard"
+    },
+    "Adult_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 18,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Onset_Check"
+    },
+    "Annual_Onset_Check": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "Annual onset hazard: 1.0% for obese adults, 0.4% otherwise. Adults who reach ",
+        "age 90 without GERD exit the module."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 90,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "obesity",
+            "operator": "is not nil"
+          },
+          "distributions": [
+            {
+              "distribution": 0.01,
+              "transition": "Heartburn_Symptom"
+            },
+            {
+              "distribution": 0.99,
+              "transition": "Annual_Onset_Check"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.004,
+              "transition": "Heartburn_Symptom"
+            },
+            {
+              "distribution": 0.996,
+              "transition": "Annual_Onset_Check"
+            }
+          ]
+        }
+      ]
+    },
+    "Heartburn_Symptom": {
+      "type": "Symptom",
+      "symptom": "Heartburn",
+      "cause": "GERD",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Regurgitation_Symptom"
+    },
+    "Regurgitation_Symptom": {
+      "type": "Symptom",
+      "symptom": "Acid Regurgitation",
+      "cause": "GERD",
+      "range": {
+        "low": 20,
+        "high": 60
+      },
+      "direct_transition": "GERD_Onset"
+    },
+    "GERD_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "gerd_condition",
+      "target_encounter": "GERD_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "235595009",
+          "display": "Gastroesophageal reflux disease (disorder)"
+        }
+      ],
+      "direct_transition": "Set_GERD_Flag"
+    },
+    "Set_GERD_Flag": {
+      "type": "SetAttribute",
+      "attribute": "gerd",
+      "value": true,
+      "direct_transition": "GERD_Diagnosis_Encounter"
+    },
+    "GERD_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "GERD_CarePlan"
+    },
+    "GERD_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "734163000",
+          "display": "Care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "226234005",
+          "display": "Healthy diet (finding)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "388976009",
+          "display": "Weight reduction regimen (regime/therapy)"
+        }
+      ],
+      "direct_transition": "Initial_PPI_Order"
+    },
+    "Initial_PPI_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "gerd_ppi",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "198051",
+          "display": "omeprazole 20 MG Delayed Release Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Set_PPI_Active"
+    },
+    "Set_PPI_Active": {
+      "type": "SetAttribute",
+      "attribute": "gerd_ppi_stopped",
+      "value": false,
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Treatment_Response_Window"
+    },
+    "Treatment_Response_Window": {
+      "type": "Delay",
+      "range": {
+        "low": 8,
+        "high": 12,
+        "unit": "weeks"
+      },
+      "remarks": [
+        "~85% of patients respond to initial PPI therapy and move to routine annual ",
+        "follow-up; ~15% remain symptomatic (refractory) and are referred for upper ",
+        "GI endoscopy."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "Annual_GERD_Delay"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "GI_Referral_Encounter"
+        }
+      ]
+    },
+    "GI_Referral_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Upper_GI_Endoscopy"
+    },
+    "Upper_GI_Endoscopy": {
+      "type": "Procedure",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "76009000",
+          "display": "Esophagogastroduodenoscopy (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 45,
+        "unit": "minutes"
+      },
+      "direct_transition": "Endoscopy_Findings"
+    },
+    "Endoscopy_Findings": {
+      "type": "Simple",
+      "remarks": [
+        "~5% of patients endoscoped for refractory reflux are found to have ",
+        "Barrett's esophagus."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.05,
+          "transition": "Barretts_Onset"
+        },
+        {
+          "distribution": 0.95,
+          "transition": "End_GI_Encounter"
+        }
+      ]
+    },
+    "Barretts_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "barretts_condition",
+      "target_encounter": "GI_Referral_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "302914006",
+          "display": "Barrett's esophagus (disorder)"
+        }
+      ],
+      "direct_transition": "End_GI_Encounter"
+    },
+    "End_GI_Encounter": {
+      "type": "EncounterEnd",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "barretts_condition",
+            "operator": "is not nil"
+          },
+          "transition": "Barretts_Surveillance_Delay"
+        },
+        {
+          "transition": "Annual_GERD_Delay"
+        }
+      ]
+    },
+    "Barretts_Surveillance_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 3,
+        "unit": "years"
+      },
+      "remarks": [
+        "ACG guidelines recommend surveillance endoscopy every 3-5 years for ",
+        "non-dysplastic Barrett's esophagus. Patients with Barrett's remain on ",
+        "long-term PPI therapy, renewed at each surveillance visit."
+      ],
+      "direct_transition": "Barretts_Surveillance_Encounter"
+    },
+    "Barretts_Surveillance_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "barretts_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Surveillance_Endoscopy"
+    },
+    "Surveillance_Endoscopy": {
+      "type": "Procedure",
+      "reason": "barretts_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "76009000",
+          "display": "Esophagogastroduodenoscopy (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 45,
+        "unit": "minutes"
+      },
+      "direct_transition": "End_PPI_For_Surveillance_Renewal"
+    },
+    "End_PPI_For_Surveillance_Renewal": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "gerd_ppi",
+      "direct_transition": "Surveillance_PPI_Renewal"
+    },
+    "Surveillance_PPI_Renewal": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "gerd_ppi",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "198051",
+          "display": "omeprazole 20 MG Delayed Release Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 35
+      },
+      "direct_transition": "End_Surveillance_Encounter"
+    },
+    "End_Surveillance_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Barretts_Surveillance_Delay"
+    },
+    "Annual_GERD_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 12,
+        "unit": "months"
+      },
+      "direct_transition": "GERD_Followup_Encounter"
+    },
+    "GERD_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "gerd_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "PPI_Status_Check"
+    },
+    "PPI_Status_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "gerd_ppi_stopped",
+            "operator": "==",
+            "value": true
+          },
+          "transition": "PPI_Restart_Decision"
+        },
+        {
+          "transition": "PPI_Adherence_Decision"
+        }
+      ]
+    },
+    "PPI_Adherence_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "PPI non-adherence: 15% of patients on a PPI stop it each year; the rest renew."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "End_PPI_For_Renewal"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Discontinue_PPI"
+        }
+      ]
+    },
+    "End_PPI_For_Renewal": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "gerd_ppi",
+      "direct_transition": "PPI_Renewal"
+    },
+    "PPI_Renewal": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "gerd_ppi",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "198051",
+          "display": "omeprazole 20 MG Delayed Release Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "Discontinue_PPI": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "gerd_ppi",
+      "direct_transition": "Set_PPI_Stopped"
+    },
+    "Set_PPI_Stopped": {
+      "type": "SetAttribute",
+      "attribute": "gerd_ppi_stopped",
+      "value": true,
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "PPI_Restart_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Most GERD patients relapse after stopping a PPI; 50% restart at each ",
+        "annual follow-up while off therapy."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.5,
+          "transition": "Restart_PPI"
+        },
+        {
+          "distribution": 0.5,
+          "transition": "End_Followup_Encounter"
+        }
+      ]
+    },
+    "Restart_PPI": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "gerd_ppi",
+      "reason": "gerd_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "198051",
+          "display": "omeprazole 20 MG Delayed Release Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Clear_PPI_Stopped"
+    },
+    "Clear_PPI_Stopped": {
+      "type": "SetAttribute",
+      "attribute": "gerd_ppi_stopped",
+      "value": false,
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "End_Followup_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Annual_GERD_Delay"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

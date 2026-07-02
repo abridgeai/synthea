@@ -1,0 +1,562 @@
+{
+  "name": "Parkinson's Disease",
+  "remarks": [
+    "This module models idiopathic Parkinson's disease. Onset is almost entirely after age 60. ",
+    "Prevalence is roughly 1% of adults over 60, and the disease is about 1.5x more common in ",
+    "men than women. This model sends 1.5% of men and 1.0% of women toward onset at a uniformly ",
+    "distributed age between 60 and 85 (not all live long enough to reach onset, keeping the ",
+    "prevalence among 60+ near the target).",
+    "Sources: ",
+    "Pringsheim T, et al. 'The prevalence of Parkinson's disease: a systematic review and ",
+    "meta-analysis.' Mov Disord. 2014;29(13):1583-1590. ",
+    "Van Den Eeden SK, et al. 'Incidence of Parkinson's disease: variation by age, gender, and ",
+    "race/ethnicity.' Am J Epidemiol. 2003;157(11):1015-1022. (male:female rate ratio ~1.9, ",
+    "onset rare before age 50, incidence peaks in the 70s).",
+    "Clinical flow: tremor/bradykinesia/rigidity symptoms lead to a neurology ambulatory ",
+    "encounter and diagnosis, treated with carbidopa/levodopa and 6-month neurology follow-ups. ",
+    "The disease progresses over years (worsening symptoms and a dose increase at mid-stage), ",
+    "and at the advanced stage patients develop fall risk and receive an assistance care plan. ",
+    "A ~10% per-followup medication discontinuation branch models non-adherence, with ",
+    "resumption at the next follow-up. Parkinson's shortens life expectancy: a conservative 3% ",
+    "death probability per 6-month cycle applies at the advanced stage only. This module does ",
+    "NOT onset dementia (dementia.json models dementia); it sets the boolean attribute ",
+    "'parkinsons' so other modules can correlate with this condition."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "======================================================================",
+        " INCIDENCE: ~1% of 60+; ~1.5x more common in men                      ",
+        "======================================================================"
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "M"
+          },
+          "distributions": [
+            {
+              "distribution": 0.015,
+              "transition": "Delay_Until_PD_Onset"
+            },
+            {
+              "distribution": 0.985,
+              "transition": "Terminal"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "F"
+          },
+          "distributions": [
+            {
+              "distribution": 0.01,
+              "transition": "Delay_Until_PD_Onset"
+            },
+            {
+              "distribution": 0.99,
+              "transition": "Terminal"
+            }
+          ]
+        }
+      ]
+    },
+    "Delay_Until_PD_Onset": {
+      "type": "Delay",
+      "range": {
+        "low": 60,
+        "high": 85,
+        "unit": "years"
+      },
+      "direct_transition": "PD_Onset"
+    },
+    "PD_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Neurology_Encounter",
+      "assign_to_attribute": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "49049000",
+          "display": "Parkinson's disease (disorder)"
+        }
+      ],
+      "direct_transition": "Set_Parkinsons_Attribute"
+    },
+    "Set_Parkinsons_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "parkinsons",
+      "value": true,
+      "remarks": [
+        "Boolean flag so other modules can key off this condition."
+      ],
+      "direct_transition": "Tremor_Symptom"
+    },
+    "Tremor_Symptom": {
+      "type": "Symptom",
+      "symptom": "Tremor",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 30,
+        "high": 60
+      },
+      "direct_transition": "Bradykinesia_Symptom"
+    },
+    "Bradykinesia_Symptom": {
+      "type": "Symptom",
+      "symptom": "Bradykinesia",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 20,
+        "high": 50
+      },
+      "direct_transition": "Stiffness_Symptom"
+    },
+    "Stiffness_Symptom": {
+      "type": "Symptom",
+      "symptom": "Stiffness",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 20,
+        "high": 50
+      },
+      "direct_transition": "Neurology_Encounter"
+    },
+    "Neurology_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Neurological_Exam"
+    },
+    "Neurological_Exam": {
+      "type": "Procedure",
+      "reason": "parkinsons_condition",
+      "remarks": [
+        "Neurological examination code reused from spina_bifida.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "84728005",
+          "display": "Neurological examination (procedure)"
+        }
+      ],
+      "direct_transition": "Prescribe_Levodopa"
+    },
+    "Prescribe_Levodopa": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "pd_levodopa",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "197444",
+          "display": "carbidopa 25 MG / levodopa 100 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Neurology_Encounter"
+    },
+    "End_Neurology_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Early_PD_Period"
+    },
+    "Early_PD_Period": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 6,
+        "unit": "months"
+      },
+      "direct_transition": "Early_Followup_Encounter"
+    },
+    "Early_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Early_Followup_Exam"
+    },
+    "Early_Followup_Exam": {
+      "type": "Procedure",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "84728005",
+          "display": "Neurological examination (procedure)"
+        }
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pd_levodopa",
+            "operator": "is nil"
+          },
+          "transition": "Resume_Levodopa"
+        },
+        {
+          "transition": "Early_Adherence_Check"
+        }
+      ]
+    },
+    "Resume_Levodopa": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "pd_levodopa",
+      "reason": "parkinsons_condition",
+      "remarks": [
+        "Patients who stopped therapy resume it at the next follow-up after symptoms worsen."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "197444",
+          "display": "carbidopa 25 MG / levodopa 100 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Early_Followup"
+    },
+    "Early_Adherence_Check": {
+      "type": "Simple",
+      "remarks": [
+        "~10% of patients discontinue their maintenance medication between visits ",
+        "(side effects, cost, or perceived lack of benefit)."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.1,
+          "transition": "Stop_Levodopa"
+        },
+        {
+          "distribution": 0.9,
+          "transition": "End_Early_Followup"
+        }
+      ]
+    },
+    "Stop_Levodopa": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "pd_levodopa",
+      "direct_transition": "Clear_Levodopa_Attribute"
+    },
+    "Clear_Levodopa_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "pd_levodopa",
+      "direct_transition": "End_Early_Followup"
+    },
+    "End_Early_Followup": {
+      "type": "EncounterEnd",
+      "direct_transition": "Early_Progression_Check"
+    },
+    "Early_Progression_Check": {
+      "type": "Simple",
+      "remarks": [
+        "6% chance per 6-month cycle to progress to mid-stage disease: a mean of ",
+        "roughly 8 years in the early stage."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.06,
+          "transition": "Tremor_Worsens"
+        },
+        {
+          "distribution": 0.94,
+          "transition": "Early_PD_Period"
+        }
+      ]
+    },
+    "Tremor_Worsens": {
+      "type": "Symptom",
+      "symptom": "Tremor",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 50,
+        "high": 80
+      },
+      "direct_transition": "Bradykinesia_Worsens"
+    },
+    "Bradykinesia_Worsens": {
+      "type": "Symptom",
+      "symptom": "Bradykinesia",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 40,
+        "high": 70
+      },
+      "direct_transition": "Mid_Adjustment_Encounter"
+    },
+    "Mid_Adjustment_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pd_levodopa",
+            "operator": "is not nil"
+          },
+          "transition": "End_Low_Dose_Levodopa"
+        },
+        {
+          "transition": "Prescribe_Higher_Dose_Levodopa"
+        }
+      ]
+    },
+    "End_Low_Dose_Levodopa": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "pd_levodopa",
+      "direct_transition": "Prescribe_Higher_Dose_Levodopa"
+    },
+    "Prescribe_Higher_Dose_Levodopa": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "pd_levodopa",
+      "reason": "parkinsons_condition",
+      "remarks": [
+        "As the disease progresses the levodopa dose is increased."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "197445",
+          "display": "carbidopa 25 MG / levodopa 250 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Mid_Encounter"
+    },
+    "End_Mid_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Mid_PD_Period"
+    },
+    "Mid_PD_Period": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 6,
+        "unit": "months"
+      },
+      "direct_transition": "Mid_Followup_Encounter"
+    },
+    "Mid_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Mid_Followup_Exam"
+    },
+    "Mid_Followup_Exam": {
+      "type": "Procedure",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "84728005",
+          "display": "Neurological examination (procedure)"
+        }
+      ],
+      "direct_transition": "End_Mid_Followup"
+    },
+    "End_Mid_Followup": {
+      "type": "EncounterEnd",
+      "direct_transition": "Mid_Progression_Check"
+    },
+    "Mid_Progression_Check": {
+      "type": "Simple",
+      "remarks": [
+        "5% chance per 6-month cycle to progress to advanced disease: a mean of ",
+        "roughly 10 years in the mid stage."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.05,
+          "transition": "Tremor_Severe"
+        },
+        {
+          "distribution": 0.95,
+          "transition": "Mid_PD_Period"
+        }
+      ]
+    },
+    "Tremor_Severe": {
+      "type": "Symptom",
+      "symptom": "Tremor",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 70,
+        "high": 95
+      },
+      "direct_transition": "Bradykinesia_Severe"
+    },
+    "Bradykinesia_Severe": {
+      "type": "Symptom",
+      "symptom": "Bradykinesia",
+      "cause": "Parkinson's Disease",
+      "range": {
+        "low": 60,
+        "high": 90
+      },
+      "direct_transition": "Falls_Symptom"
+    },
+    "Falls_Symptom": {
+      "type": "Symptom",
+      "symptom": "Falls",
+      "cause": "Parkinson's Disease",
+      "remarks": [
+        "Postural instability and falls are hallmarks of advanced Parkinson's disease."
+      ],
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "Advanced_Care_Encounter"
+    },
+    "Advanced_Care_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Advanced_Care_Plan"
+    },
+    "Advanced_Care_Plan": {
+      "type": "CarePlanStart",
+      "reason": "parkinsons_condition",
+      "remarks": [
+        "Assistance care plan for advanced disease: physical therapy, occupational therapy, ",
+        "and nursing care/supervision. Codes reused from cystic_fibrosis.json and ",
+        "home_health_treatment.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "734163000",
+          "display": "Care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "91251008",
+          "display": "Physical therapy procedure (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "84478008",
+          "display": "Occupational therapy (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "410401003",
+          "display": "Nursing care/supplementary surveillance (regime/therapy)"
+        }
+      ],
+      "direct_transition": "End_Advanced_Encounter"
+    },
+    "End_Advanced_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Advanced_PD_Period"
+    },
+    "Advanced_PD_Period": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 6,
+        "unit": "months"
+      },
+      "direct_transition": "Advanced_Followup_Encounter"
+    },
+    "Advanced_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Advanced_Followup_Exam"
+    },
+    "Advanced_Followup_Exam": {
+      "type": "Procedure",
+      "reason": "parkinsons_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "84728005",
+          "display": "Neurological examination (procedure)"
+        }
+      ],
+      "direct_transition": "End_Advanced_Followup"
+    },
+    "End_Advanced_Followup": {
+      "type": "EncounterEnd",
+      "direct_transition": "Advanced_Outcome_Check"
+    },
+    "Advanced_Outcome_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Parkinson's disease shortens life expectancy, mostly at the advanced stage ",
+        "(aspiration pneumonia, complications of falls and immobility). A conservative ",
+        "3% chance of death per 6-month cycle (~6% annually) applies only at this stage; ",
+        "background mortality from the lifecycle module dominates for most patients."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.03,
+          "transition": "Death_From_PD"
+        },
+        {
+          "distribution": 0.97,
+          "transition": "Advanced_PD_Period"
+        }
+      ]
+    },
+    "Death_From_PD": {
+      "type": "Death",
+      "referenced_by_attribute": "parkinsons_condition",
+      "range": {
+        "low": 30,
+        "high": 180,
+        "unit": "days"
+      },
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

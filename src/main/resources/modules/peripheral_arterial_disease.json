@@ -1,0 +1,516 @@
+{
+  "name": "Peripheral Arterial Disease",
+  "remarks": [
+    "Module for peripheral arterial disease (PAD) of the lower extremities.",
+    "Prevalence is ~5% in the 50s rising to ~10-20% by the 80s, and is strongly associated with ",
+    "smoking (2-4x risk) and diabetes (2-4x risk).",
+    "Sources: Selvin & Erlinger, Circulation 2004 (NHANES 1999-2000: 4.3% age >=40, 14.5% age >=70); ",
+    "https://www.cdc.gov/heart-disease/about/peripheral-arterial-disease.html ; ",
+    "Fowkes et al., Lancet 2013 (global PAD epidemiology).",
+    "Onset is modeled as an annual hazard loop beginning at age 45, with higher hazards when the ",
+    "'smoker' or 'diabetes' attributes are true (attribute names verified against copd.json and ",
+    "metabolic_syndrome_disease.json).",
+    "Clinical flow: intermittent claudication symptoms -> ambulatory visit -> ankle-brachial index ",
+    "(ABI) measurement -> PAD diagnosis -> cilostazol plus an exercise / smoking-cessation / diet ",
+    "care plan -> annual follow-up with repeat ABI. ~12% of patients discontinue cilostazol early ",
+    "(non-adherence) and most resume after a follow-up visit.",
+    "Progression: ~3%/yr of diagnosed patients progress to critical limb ischemia, treated with ",
+    "revascularization (femoral angioplasty ~70% or femoral-popliteal bypass ~30%; Norgren et al., ",
+    "TASC II, J Vasc Surg 2007).",
+    "NOTE: this module deliberately does NOT model amputation. Lower-extremity amputation for ",
+    "diabetic/vascular disease is owned by metabolic_syndrome/amputations.json.",
+    "Sets attribute 'pad' = true at diagnosis so other modules can key off it."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 45,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_PAD_Risk"
+    },
+    "Annual_PAD_Risk": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "Annual onset hazards from age 45: smoker + diabetes 1.5%/yr, smoker 1.0%/yr, ",
+        "diabetes 0.8%/yr, otherwise 0.3%/yr. Over ~35 years this yields roughly 10% cumulative ",
+        "incidence in low-risk patients and 30-40% in smokers with diabetes, approximating the ",
+        "age-stratified prevalence in NHANES/TASC II given competing mortality."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "smoker",
+                "operator": "==",
+                "value": true
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "distribution": 0.015,
+              "transition": "PAD_Onset"
+            },
+            {
+              "distribution": 0.985,
+              "transition": "Annual_PAD_Risk"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "smoker",
+            "operator": "==",
+            "value": true
+          },
+          "distributions": [
+            {
+              "distribution": 0.01,
+              "transition": "PAD_Onset"
+            },
+            {
+              "distribution": 0.99,
+              "transition": "Annual_PAD_Risk"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "diabetes",
+            "operator": "==",
+            "value": true
+          },
+          "distributions": [
+            {
+              "distribution": 0.008,
+              "transition": "PAD_Onset"
+            },
+            {
+              "distribution": 0.992,
+              "transition": "Annual_PAD_Risk"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.003,
+              "transition": "PAD_Onset"
+            },
+            {
+              "distribution": 0.997,
+              "transition": "Annual_PAD_Risk"
+            }
+          ]
+        }
+      ]
+    },
+    "PAD_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "PAD_Diagnosis_Encounter",
+      "assign_to_attribute": "pad_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "399957001",
+          "display": "Peripheral arterial occlusive disease (disorder)"
+        }
+      ],
+      "direct_transition": "Set_PAD_Attribute"
+    },
+    "Set_PAD_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "pad",
+      "value": true,
+      "direct_transition": "Claudication_Onset"
+    },
+    "Claudication_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "PAD_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "63491006",
+          "display": "Intermittent claudication (finding)"
+        }
+      ],
+      "direct_transition": "Claudication_Symptom"
+    },
+    "Claudication_Symptom": {
+      "type": "Symptom",
+      "symptom": "Cramping Leg Pain with Exertion",
+      "cause": "Peripheral arterial occlusive disease",
+      "range": {
+        "low": 25,
+        "high": 75
+      },
+      "direct_transition": "PAD_Diagnosis_Encounter"
+    },
+    "PAD_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "PAD_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "ABI_Observation"
+    },
+    "ABI_Observation": {
+      "type": "Observation",
+      "category": "exam",
+      "unit": "{ratio}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "77194-9",
+          "display": "Ankle-brachial index"
+        }
+      ],
+      "remarks": [
+        "ABI 0.4-0.89 indicates mild-to-moderate PAD."
+      ],
+      "range": {
+        "low": 0.5,
+        "high": 0.89
+      },
+      "direct_transition": "Cilostazol_Order"
+    },
+    "Cilostazol_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "pad_medication",
+      "reason": "PAD_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 242461,
+          "display": "cilostazol 100 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "PAD_CarePlan"
+    },
+    "PAD_CarePlan": {
+      "type": "CarePlanStart",
+      "assign_to_attribute": "pad_careplan",
+      "reason": "PAD_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "734163000",
+          "display": "Care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "229065009",
+          "display": "Exercise therapy (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "710081004",
+          "display": "Smoking cessation therapy (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "226234005",
+          "display": "Healthy diet (finding)"
+        }
+      ],
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "PAD_Followup_Delay"
+    },
+    "PAD_Followup_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "Annual follow-up loop. ~3%/yr progress to critical limb ischemia (TASC II reports ",
+        "1-3%/yr of claudicants deteriorating). ~12%/yr enter the medication non-adherence branch."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.03,
+          "transition": "CLI_Onset"
+        },
+        {
+          "distribution": 0.12,
+          "transition": "Cilostazol_Nonadherence"
+        },
+        {
+          "distribution": 0.85,
+          "transition": "PAD_Followup_Encounter"
+        }
+      ]
+    },
+    "PAD_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "PAD_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Followup_ABI"
+    },
+    "Followup_ABI": {
+      "type": "Observation",
+      "category": "exam",
+      "unit": "{ratio}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "77194-9",
+          "display": "Ankle-brachial index"
+        }
+      ],
+      "range": {
+        "low": 0.5,
+        "high": 0.89
+      },
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "End_Followup_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "PAD_Followup_Delay"
+    },
+    "Cilostazol_Nonadherence": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "pad_medication",
+      "remarks": [
+        "Patient stops cilostazol on their own; 3-9 months later they are seen in follow-up ",
+        "and 75% resume the medication."
+      ],
+      "direct_transition": "Nonadherence_Gap"
+    },
+    "Nonadherence_Gap": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 9,
+        "unit": "months"
+      },
+      "direct_transition": "Nonadherence_Followup"
+    },
+    "Nonadherence_Followup": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "PAD_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.75,
+          "transition": "Cilostazol_Restart"
+        },
+        {
+          "distribution": 0.25,
+          "transition": "End_Nonadherence_Encounter"
+        }
+      ]
+    },
+    "Cilostazol_Restart": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "pad_medication",
+      "reason": "PAD_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 242461,
+          "display": "cilostazol 100 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Nonadherence_Encounter"
+    },
+    "End_Nonadherence_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "PAD_Followup_Delay"
+    },
+    "CLI_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "CLI_Encounter",
+      "assign_to_attribute": "cli_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "233962007",
+          "display": "Critical ischemia of lower limb (disorder)"
+        }
+      ],
+      "direct_transition": "Rest_Pain_Symptom"
+    },
+    "Rest_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Leg Pain at Rest",
+      "cause": "Critical ischemia of lower limb",
+      "range": {
+        "low": 60,
+        "high": 95
+      },
+      "direct_transition": "CLI_Encounter"
+    },
+    "CLI_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "CLI_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "CLI_ABI"
+    },
+    "CLI_ABI": {
+      "type": "Observation",
+      "category": "exam",
+      "unit": "{ratio}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "77194-9",
+          "display": "Ankle-brachial index"
+        }
+      ],
+      "remarks": [
+        "ABI below ~0.4 is consistent with critical limb ischemia."
+      ],
+      "range": {
+        "low": 0.15,
+        "high": 0.39
+      },
+      "direct_transition": "End_CLI_Encounter"
+    },
+    "End_CLI_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Revascularization_Admission"
+    },
+    "Revascularization_Admission": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "CLI_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "remarks": [
+        "Endovascular-first strategy: ~70% angioplasty, ~30% surgical bypass (TASC II). ",
+        "Amputation is intentionally not modeled here; see metabolic_syndrome/amputations.json."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.7,
+          "transition": "Femoral_Angioplasty"
+        },
+        {
+          "distribution": 0.3,
+          "transition": "Femoral_Popliteal_Bypass"
+        }
+      ]
+    },
+    "Femoral_Angioplasty": {
+      "type": "Procedure",
+      "reason": "CLI_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "401114006",
+          "display": "Angioplasty of femoral artery (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 60,
+        "high": 120,
+        "unit": "minutes"
+      },
+      "direct_transition": "Post_Revascularization_Recovery"
+    },
+    "Femoral_Popliteal_Bypass": {
+      "type": "Procedure",
+      "reason": "CLI_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "112828007",
+          "display": "Femoral-popliteal artery bypass graft (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 2,
+        "high": 4,
+        "unit": "hours"
+      },
+      "direct_transition": "Post_Revascularization_Recovery"
+    },
+    "Post_Revascularization_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 6,
+        "unit": "days"
+      },
+      "direct_transition": "End_Revascularization_Admission"
+    },
+    "End_Revascularization_Admission": {
+      "type": "EncounterEnd",
+      "direct_transition": "Reduce_Rest_Pain"
+    },
+    "Reduce_Rest_Pain": {
+      "type": "Symptom",
+      "symptom": "Leg Pain at Rest",
+      "cause": "Critical ischemia of lower limb",
+      "remarks": [
+        "Revascularization relieves rest pain; the patient returns to routine annual follow-up."
+      ],
+      "range": {
+        "low": 0,
+        "high": 10
+      },
+      "direct_transition": "PAD_Followup_Delay"
+    }
+  },
+  "gmf_version": 1
+}

@@ -1,0 +1,592 @@
+{
+  "name": "Benign Prostatic Hyperplasia",
+  "remarks": [
+    "Benign prostatic hyperplasia (BPH) model. Males only, with onset from age 50.",
+    "",
+    "PREVALENCE: Histologic BPH is present in ~50-60% of men in their 60s and ~70-80% of men ",
+    "in their 70s-80s (Berry SJ et al., 'The development of human benign prostatic hyperplasia ",
+    "with age', J Urol 1984;132:474-479). This module uses an annual onset hazard of 4% per ",
+    "year beginning at age 50, giving cumulative prevalence of ~34% by age 60, ~56% by age 70, ",
+    "and ~71% by age 80, approximating clinically apparent disease.",
+    "",
+    "FLOW: Lower urinary tract symptoms (urinary frequency, nocturia) lead to an ambulatory ",
+    "encounter where BPH is diagnosed, a PSA is drawn (BPH commonly elevates PSA), and an ",
+    "alpha-blocker (tamsulosin 0.4 MG daily) is started. Patients are followed annually with ",
+    "repeat PSA. Each year, ~4% of treated patients progress (worsening symptoms) and are ",
+    "referred to urology, where finasteride (5-alpha-reductase inhibitor) is added per AUA ",
+    "guidelines for combination therapy. Of patients under urology care, ~10% per year go on ",
+    "to transurethral resection of the prostate (TURP), performed as an inpatient surgical ",
+    "admission; medications are stopped after TURP and urinary symptoms largely resolve.",
+    "",
+    "NON-ADHERENCE: At each annual follow-up, 13% of patients on tamsulosin discontinue it; ",
+    "patients off therapy have a 55% chance of restarting at each subsequent follow-up ",
+    "(persistence with BPH pharmacotherapy at 1 year is commonly reported below 70%; ",
+    "Cindolo et al., Eur Urol 2015;68:418-425).",
+    "",
+    "ATTRIBUTES: sets 'bph' = true at onset (for cross-module correlation), 'bph_condition' ",
+    "(the condition itself), 'bph_alpha_blocker' (active tamsulosin), 'bph_5ari' (active ",
+    "finasteride), and 'bph_med_stopped' (non-adherence flag).",
+    "",
+    "CODES: PSA LOINC 2857-1 is reused from veteran_prostate_cancer.json. BPH SNOMED 266569009, ",
+    "TURP SNOMED 90199006 (Transurethral prostatectomy), tamsulosin RxNorm 863669, and ",
+    "finasteride RxNorm 310346 were verified against SNOMED CT (tx.fhir.org, Feb 2025 release) ",
+    "and RxNav."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "M"
+          },
+          "transition": "Age_Guard"
+        },
+        {
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 50,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Onset_Check"
+    },
+    "Annual_Onset_Check": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "remarks": [
+        "4% annual onset hazard from age 50: cumulative ~34% by 60, ~56% by 70, ~71% by 80 ",
+        "(Berry et al., J Urol 1984). Men who reach age 90 without BPH exit the module."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 90,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.04,
+              "transition": "Urinary_Frequency_Symptom"
+            },
+            {
+              "distribution": 0.96,
+              "transition": "Annual_Onset_Check"
+            }
+          ]
+        }
+      ]
+    },
+    "Urinary_Frequency_Symptom": {
+      "type": "Symptom",
+      "symptom": "Urinary Frequency",
+      "cause": "Benign Prostatic Hyperplasia",
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "Nocturia_Symptom"
+    },
+    "Nocturia_Symptom": {
+      "type": "Symptom",
+      "symptom": "Nocturia",
+      "cause": "Benign Prostatic Hyperplasia",
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "BPH_Onset"
+    },
+    "BPH_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "bph_condition",
+      "target_encounter": "BPH_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "266569009",
+          "display": "Benign prostatic hyperplasia (disorder)"
+        }
+      ],
+      "direct_transition": "Set_BPH_Flag"
+    },
+    "Set_BPH_Flag": {
+      "type": "SetAttribute",
+      "attribute": "bph",
+      "value": true,
+      "direct_transition": "BPH_Diagnosis_Encounter"
+    },
+    "BPH_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Record_PSA"
+    },
+    "Record_PSA": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "ng/mL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2857-1",
+          "display": "Prostate specific Ag [Mass/volume] in Serum or Plasma"
+        }
+      ],
+      "range": {
+        "low": 1.5,
+        "high": 6.5
+      },
+      "remarks": [
+        "BPH commonly produces a mildly elevated PSA."
+      ],
+      "direct_transition": "Tamsulosin_Order"
+    },
+    "Tamsulosin_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "bph_alpha_blocker",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "863669",
+          "display": "tamsulosin hydrochloride 0.4 MG Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Set_BPH_Med_Active"
+    },
+    "Set_BPH_Med_Active": {
+      "type": "SetAttribute",
+      "attribute": "bph_med_stopped",
+      "value": false,
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Annual_BPH_Delay"
+    },
+    "Annual_BPH_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 12,
+        "unit": "months"
+      },
+      "direct_transition": "BPH_Followup_Encounter"
+    },
+    "BPH_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Record_Followup_PSA"
+    },
+    "Record_Followup_PSA": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "ng/mL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2857-1",
+          "display": "Prostate specific Ag [Mass/volume] in Serum or Plasma"
+        }
+      ],
+      "range": {
+        "low": 1.5,
+        "high": 6.5
+      },
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "bph_med_stopped",
+            "operator": "==",
+            "value": true
+          },
+          "transition": "Tamsulosin_Restart_Decision"
+        },
+        {
+          "transition": "BPH_Course_Decision"
+        }
+      ]
+    },
+    "BPH_Course_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Each year on alpha-blocker therapy: 83% renew, 13% discontinue (non-adherence), ",
+        "4% progress with worsening symptoms and are referred to urology."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.83,
+          "transition": "End_Tamsulosin_For_Renewal"
+        },
+        {
+          "distribution": 0.13,
+          "transition": "Discontinue_Tamsulosin"
+        },
+        {
+          "distribution": 0.04,
+          "transition": "Worsening_Symptoms"
+        }
+      ]
+    },
+    "End_Tamsulosin_For_Renewal": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "bph_alpha_blocker",
+      "direct_transition": "Tamsulosin_Renewal"
+    },
+    "Tamsulosin_Renewal": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "bph_alpha_blocker",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "863669",
+          "display": "tamsulosin hydrochloride 0.4 MG Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "Discontinue_Tamsulosin": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "bph_alpha_blocker",
+      "direct_transition": "Set_BPH_Med_Stopped"
+    },
+    "Set_BPH_Med_Stopped": {
+      "type": "SetAttribute",
+      "attribute": "bph_med_stopped",
+      "value": true,
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "Tamsulosin_Restart_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "55% of patients off therapy restart at each annual follow-up as symptoms recur."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.55,
+          "transition": "Restart_Tamsulosin"
+        },
+        {
+          "distribution": 0.45,
+          "transition": "End_Followup_Encounter"
+        }
+      ]
+    },
+    "Restart_Tamsulosin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "bph_alpha_blocker",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "863669",
+          "display": "tamsulosin hydrochloride 0.4 MG Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Clear_BPH_Med_Stopped"
+    },
+    "Clear_BPH_Med_Stopped": {
+      "type": "SetAttribute",
+      "attribute": "bph_med_stopped",
+      "value": false,
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "End_Followup_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Annual_BPH_Delay"
+    },
+    "Worsening_Symptoms": {
+      "type": "Symptom",
+      "symptom": "Nocturia",
+      "cause": "Benign Prostatic Hyperplasia",
+      "range": {
+        "low": 60,
+        "high": 90
+      },
+      "direct_transition": "End_Primary_Care_Encounter"
+    },
+    "End_Primary_Care_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Urology_Referral_Delay"
+    },
+    "Urology_Referral_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 4,
+        "unit": "weeks"
+      },
+      "direct_transition": "Urology_Encounter"
+    },
+    "Urology_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Finasteride_Order"
+    },
+    "Finasteride_Order": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "bph_5ari",
+      "reason": "bph_condition",
+      "remarks": [
+        "Finasteride is added to the alpha-blocker for progressive BPH (combination ",
+        "therapy per AUA guidelines / MTOPS)."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "310346",
+          "display": "finasteride 5 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "End_Urology_Encounter"
+    },
+    "End_Urology_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Urology_Monitoring_Delay"
+    },
+    "Urology_Monitoring_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 12,
+        "unit": "months"
+      },
+      "direct_transition": "Urology_Followup_Encounter"
+    },
+    "Urology_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Record_Urology_PSA"
+    },
+    "Record_Urology_PSA": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "ng/mL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2857-1",
+          "display": "Prostate specific Ag [Mass/volume] in Serum or Plasma"
+        }
+      ],
+      "range": {
+        "low": 0.8,
+        "high": 3.5
+      },
+      "remarks": [
+        "PSA falls by roughly 50% on finasteride. Each year under urology care, ~10% of ",
+        "patients with progressive disease undergo TURP."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.1,
+          "transition": "End_Urology_Followup_For_TURP"
+        },
+        {
+          "distribution": 0.9,
+          "transition": "End_Urology_Followup"
+        }
+      ]
+    },
+    "End_Urology_Followup": {
+      "type": "EncounterEnd",
+      "direct_transition": "Urology_Monitoring_Delay"
+    },
+    "End_Urology_Followup_For_TURP": {
+      "type": "EncounterEnd",
+      "direct_transition": "TURP_Scheduling_Delay"
+    },
+    "TURP_Scheduling_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 6,
+        "unit": "weeks"
+      },
+      "direct_transition": "TURP_Admission"
+    },
+    "TURP_Admission": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "305408004",
+          "display": "Admission to surgical department (procedure)"
+        }
+      ],
+      "direct_transition": "TURP_Procedure"
+    },
+    "TURP_Procedure": {
+      "type": "Procedure",
+      "reason": "bph_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "90199006",
+          "display": "Transurethral prostatectomy (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 60,
+        "high": 120,
+        "unit": "minutes"
+      },
+      "direct_transition": "TURP_Recovery"
+    },
+    "TURP_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 2,
+        "unit": "days"
+      },
+      "remarks": [
+        "Typical post-TURP inpatient stay of 1-2 days with catheter."
+      ],
+      "direct_transition": "End_Tamsulosin_After_TURP"
+    },
+    "End_Tamsulosin_After_TURP": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "bph_alpha_blocker",
+      "direct_transition": "End_Finasteride_After_TURP"
+    },
+    "End_Finasteride_After_TURP": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "bph_5ari",
+      "direct_transition": "Resolve_Nocturia"
+    },
+    "Resolve_Nocturia": {
+      "type": "Symptom",
+      "symptom": "Nocturia",
+      "cause": "Benign Prostatic Hyperplasia",
+      "range": {
+        "low": 0,
+        "high": 10
+      },
+      "direct_transition": "Resolve_Urinary_Frequency"
+    },
+    "Resolve_Urinary_Frequency": {
+      "type": "Symptom",
+      "symptom": "Urinary Frequency",
+      "cause": "Benign Prostatic Hyperplasia",
+      "range": {
+        "low": 0,
+        "high": 10
+      },
+      "direct_transition": "End_TURP_Encounter"
+    },
+    "End_TURP_Encounter": {
+      "type": "EncounterEnd",
+      "remarks": [
+        "The BPH condition itself remains on the problem list after TURP; medications are ",
+        "stopped and urinary symptoms resolve."
+      ],
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

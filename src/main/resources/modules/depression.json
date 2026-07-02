@@ -1,0 +1,784 @@
+{
+  "name": "Depression",
+  "remarks": [
+    "Major depressive disorder (MDD) in the general (non-veteran) population.",
+    "Veterans are excluded because the veteran_mdd module already models MDD for patients ",
+    "with the 'veteran' attribute; this module checks that attribute inside the annual onset ",
+    "loop (veteran status is assigned by the veteran module in adulthood) and exits if it is set.",
+    "",
+    "Prevalence: lifetime prevalence of MDD in US adults is roughly 15-20%, and about twice as ",
+    "high in women as in men. Sources: ",
+    "Hasin DS et al. 'Epidemiology of Adult DSM-5 Major Depressive Disorder and Its Specifiers ",
+    "in the United States.' JAMA Psychiatry. 2018;75(4):336-346 (lifetime prevalence 20.6%, ",
+    "F:M roughly 2:1). ",
+    "Kessler RC et al. 'Lifetime prevalence and age-of-onset distributions of DSM-IV disorders ",
+    "in the National Comorbidity Survey Replication.' Arch Gen Psychiatry. 2005;62(6):593-602 ",
+    "(lifetime MDD 16.6%; median age of onset 32, most first onsets between adolescence and ",
+    "the mid-40s).",
+    "",
+    "Onset is modeled as an annual-probability loop from age 12 to age 50. ",
+    "Female annual hazard 0.006 over ~38 at-risk years yields lifetime risk of about 20%; ",
+    "male annual hazard 0.003 yields about 11%. Chronic medical comorbidity (diabetes, COPD, ",
+    "CHF, opioid addiction - attributes actually set by other Synthea modules) modestly raises ",
+    "the annual hazard, reflecting the well-documented association between chronic illness and ",
+    "depression (Katon WJ, 'Epidemiology and treatment of depression in patients with chronic ",
+    "medical illness', Dialogues Clin Neurosci. 2011;13(1):7-23).",
+    "",
+    "Course: episodic. Initial treatment is a first-line SSRI (sertraline, fluoxetine, or ",
+    "escitalopram) plus a psychotherapy-oriented mental health care plan. About 30% of patients ",
+    "do not respond to the first agent and are switched to venlafaxine (consistent with STAR*D ",
+    "level-2 switching). During maintenance about 12% per quarter discontinue their ",
+    "antidepressant without medical advice (non-adherence); most later resume care at a ",
+    "follow-up visit. Remission occurs with probability 0.25 per quarter of treatment (median ",
+    "treated episode roughly 9-12 months); the SSRI is continued 4-9 months after remission ",
+    "before discontinuation, per APA practice guideline continuation-phase recommendations.",
+    "",
+    "Recurrence: after a first remitted episode, patients face a ~6%/year recurrence hazard ",
+    "with a matching 6%/year chance of permanent recovery, so about 50% eventually experience ",
+    "a recurrent episode (consistent with the commonly cited ~50% recurrence risk after a ",
+    "single episode; Burcusa SL, Iacono WG. 'Risk for recurrence in depression.' Clin Psychol ",
+    "Rev. 2007;27(8):959-985). Recurrent episodes are detected via PHQ-9 at a scheduled ",
+    "wellness encounter.",
+    "",
+    "Attributes: sets 'depression' = true at first onset and intentionally KEEPS it true after ",
+    "remission, so it acts as a lifetime history-of-depression marker that other modules (e.g. ",
+    "anxiety) can key off - comorbidity correlations depend on history, not only on currently ",
+    "active disease. The currently-active condition is tracked separately via the ",
+    "'depression_condition' attribute (nil/ended when in remission). Also uses ",
+    "'depression_careplan' and 'depression_med' internally.",
+    "",
+    "All SNOMED, LOINC, and RxNorm codes are reused from existing Synthea modules ",
+    "(veteran_mdd, encounter/depression_screening, veteran_ptsd) except escitalopram ",
+    "(RxNorm 349332) and venlafaxine (RxNorm 313586), which were verified against RxNav."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "remarks": [
+        "Onset of MDD before adolescence is uncommon; the model starts the at-risk period at age 12."
+      ],
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 12,
+        "unit": "years"
+      },
+      "direct_transition": "Wait_For_Onset"
+    },
+    "Wait_For_Onset": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Onset_Check"
+    },
+    "Onset_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Annual onset hazard, checked from age 12 until age 50 (most first onsets occur teens ",
+        "through 40s per Kessler 2005). Veterans exit here because veteran_mdd models their MDD. ",
+        "Female 0.006/yr (~20% lifetime), male 0.003/yr (~11% lifetime); chronic comorbidities ",
+        "(diabetes, COPD, CHF, opioid addiction) raise the hazard roughly 1.7x."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "veteran",
+            "operator": "is not nil"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 50,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Gender",
+                "gender": "F"
+              },
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "diabetes",
+                    "operator": "==",
+                    "value": true
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "copd_variant",
+                    "operator": "is not nil"
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "chf",
+                    "operator": "is not nil"
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "opioid_addiction",
+                    "operator": "==",
+                    "value": true
+                  }
+                ]
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "transition": "MDD_Onset",
+              "distribution": 0.01
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.99
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "F"
+          },
+          "distributions": [
+            {
+              "transition": "MDD_Onset",
+              "distribution": 0.006
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.994
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "==",
+                "value": true
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "copd_variant",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "chf",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "opioid_addiction",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "transition": "MDD_Onset",
+              "distribution": 0.005
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.995
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "transition": "MDD_Onset",
+              "distribution": 0.003
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.997
+            }
+          ]
+        }
+      ]
+    },
+    "MDD_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "depression_condition",
+      "target_encounter": "Depression_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "370143000",
+          "display": "Major depressive disorder (disorder)"
+        }
+      ],
+      "direct_transition": "Set_Depression_Attribute"
+    },
+    "Set_Depression_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "depression",
+      "value": true,
+      "remarks": [
+        "Lifetime history marker for cross-module correlation (e.g. the anxiety module raises ",
+        "its onset hazard when 'depression' is true). Intentionally never cleared, even in remission."
+      ],
+      "direct_transition": "Symptom_Delay"
+    },
+    "Symptom_Delay": {
+      "type": "Delay",
+      "remarks": [
+        "Patients typically experience symptoms for several weeks before seeking care."
+      ],
+      "range": {
+        "low": 2,
+        "high": 6,
+        "unit": "weeks"
+      },
+      "direct_transition": "Depression_Diagnosis_Encounter"
+    },
+    "Depression_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "depression_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Initial_PHQ9"
+    },
+    "Initial_PHQ9": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "44261-6",
+          "display": "Patient Health Questionnaire 9 item (PHQ-9) total score [Reported]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 12,
+        "high": 23
+      },
+      "remarks": [
+        "Moderate to severe score at diagnosis (PHQ-9 >= 10 indicates likely MDD)."
+      ],
+      "direct_transition": "Start_Depression_CarePlan"
+    },
+    "Start_Depression_CarePlan": {
+      "type": "CarePlanStart",
+      "assign_to_attribute": "depression_careplan",
+      "reason": "depression_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "718347000",
+          "display": "Mental health care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "425680009",
+          "display": "Cognitive behavioral therapy by multidisciplinary team (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "385724002",
+          "display": "Coping support management (procedure)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "225337009",
+          "display": "Suicide risk assessment (procedure)"
+        }
+      ],
+      "direct_transition": "Select_SSRI"
+    },
+    "Select_SSRI": {
+      "type": "Simple",
+      "remarks": [
+        "First-line SSRIs, prescribed with roughly equal frequency."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Sertraline",
+          "distribution": 0.34
+        },
+        {
+          "transition": "Fluoxetine",
+          "distribution": 0.33
+        },
+        {
+          "transition": "Escitalopram",
+          "distribution": 0.33
+        }
+      ]
+    },
+    "Sertraline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "depression_med",
+      "reason": "depression_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 312938,
+          "display": "Sertraline 100 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "Fluoxetine": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "depression_med",
+      "reason": "depression_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 310385,
+          "display": "FLUoxetine 20 MG Oral Capsule"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "Escitalopram": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "depression_med",
+      "reason": "depression_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 349332,
+          "display": "escitalopram 10 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Initial_Treatment_Delay"
+    },
+    "Initial_Treatment_Delay": {
+      "type": "Delay",
+      "remarks": [
+        "Antidepressant response is typically assessed after 4-8 weeks."
+      ],
+      "exact": {
+        "quantity": 6,
+        "unit": "weeks"
+      },
+      "direct_transition": "Treatment_Followup_Encounter"
+    },
+    "Treatment_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "depression_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Followup_PHQ9"
+    },
+    "Followup_PHQ9": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "44261-6",
+          "display": "Patient Health Questionnaire 9 item (PHQ-9) total score [Reported]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 4,
+        "high": 18
+      },
+      "direct_transition": "Assess_Treatment_Response"
+    },
+    "Assess_Treatment_Response": {
+      "type": "Simple",
+      "remarks": [
+        "About 30% do not respond adequately to the first SSRI and are switched to venlafaxine ",
+        "(SNRI), consistent with STAR*D level-2 medication switching."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "End_Followup_Encounter",
+          "distribution": 0.7
+        },
+        {
+          "transition": "Stop_Ineffective_SSRI",
+          "distribution": 0.3
+        }
+      ]
+    },
+    "Stop_Ineffective_SSRI": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "depression_med",
+      "direct_transition": "Switch_To_Venlafaxine"
+    },
+    "Switch_To_Venlafaxine": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "depression_med",
+      "reason": "depression_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 313586,
+          "display": "venlafaxine 75 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "End_Followup_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Maintenance_Delay"
+    },
+    "Maintenance_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 3,
+        "unit": "months"
+      },
+      "direct_transition": "Maintenance_Check"
+    },
+    "Maintenance_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Each quarter of maintenance treatment: 25% reach remission, 12% stop their medication ",
+        "without medical advice (non-adherence), and the rest continue treatment. This yields a ",
+        "median treated episode length of roughly 9-12 months."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Maintenance_Delay",
+          "distribution": 0.63
+        },
+        {
+          "transition": "Remission_Followup_Encounter",
+          "distribution": 0.25
+        },
+        {
+          "transition": "Medication_Nonadherence",
+          "distribution": 0.12
+        }
+      ]
+    },
+    "Medication_Nonadherence": {
+      "type": "MedicationEnd",
+      "remarks": [
+        "Patient discontinues the antidepressant without consulting their provider."
+      ],
+      "referenced_by_attribute": "depression_med",
+      "direct_transition": "Nonadherence_Gap"
+    },
+    "Nonadherence_Gap": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 4,
+        "unit": "months"
+      },
+      "direct_transition": "Nonadherence_Outcome"
+    },
+    "Nonadherence_Outcome": {
+      "type": "Simple",
+      "remarks": [
+        "Most non-adherent patients experience returning symptoms and re-engage with care, ",
+        "resuming an antidepressant; some remit without further pharmacotherapy."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Resume_Care_Encounter",
+          "distribution": 0.6
+        },
+        {
+          "transition": "Untreated_Remission",
+          "distribution": 0.4
+        }
+      ]
+    },
+    "Resume_Care_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "depression_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Resume_SSRI"
+    },
+    "Resume_SSRI": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "depression_med",
+      "reason": "depression_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 312938,
+          "display": "Sertraline 100 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Resume_Encounter"
+    },
+    "End_Resume_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Maintenance_Delay"
+    },
+    "Untreated_Remission": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "depression_condition",
+      "direct_transition": "End_CarePlan_Untreated"
+    },
+    "End_CarePlan_Untreated": {
+      "type": "CarePlanEnd",
+      "referenced_by_attribute": "depression_careplan",
+      "direct_transition": "Recurrence_Watch"
+    },
+    "Remission_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "depression_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Remission_PHQ9"
+    },
+    "Remission_PHQ9": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "44261-6",
+          "display": "Patient Health Questionnaire 9 item (PHQ-9) total score [Reported]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 0,
+        "high": 4
+      },
+      "remarks": [
+        "PHQ-9 < 5 indicates remission."
+      ],
+      "direct_transition": "Depression_Remission"
+    },
+    "Depression_Remission": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "depression_condition",
+      "remarks": [
+        "The active MDD condition ends. The 'depression' history attribute stays true."
+      ],
+      "direct_transition": "End_Remission_Encounter"
+    },
+    "End_Remission_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Continuation_Therapy_Delay"
+    },
+    "Continuation_Therapy_Delay": {
+      "type": "Delay",
+      "remarks": [
+        "APA guidelines recommend continuing the antidepressant 4-9 months after remission."
+      ],
+      "range": {
+        "low": 4,
+        "high": 9,
+        "unit": "months"
+      },
+      "direct_transition": "Stop_SSRI_After_Remission"
+    },
+    "Stop_SSRI_After_Remission": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "depression_med",
+      "direct_transition": "End_Depression_CarePlan"
+    },
+    "End_Depression_CarePlan": {
+      "type": "CarePlanEnd",
+      "referenced_by_attribute": "depression_careplan",
+      "direct_transition": "Recurrence_Watch"
+    },
+    "Recurrence_Watch": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Recurrence_Check"
+    },
+    "Recurrence_Check": {
+      "type": "Simple",
+      "remarks": [
+        "6%/yr recurrence hazard vs 6%/yr permanent recovery gives ~50% cumulative recurrence ",
+        "after a first episode (Burcusa & Iacono 2007)."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Recurrence_Wellness_Encounter",
+          "distribution": 0.06
+        },
+        {
+          "transition": "Terminal",
+          "distribution": 0.06
+        },
+        {
+          "transition": "Recurrence_Watch",
+          "distribution": 0.88
+        }
+      ]
+    },
+    "Recurrence_Wellness_Encounter": {
+      "type": "Encounter",
+      "wellness": true,
+      "remarks": [
+        "Recurrent episodes are picked up by PHQ-9 screening at the next scheduled wellness visit."
+      ],
+      "direct_transition": "Recurrence_PHQ9"
+    },
+    "Recurrence_PHQ9": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "44261-6",
+          "display": "Patient Health Questionnaire 9 item (PHQ-9) total score [Reported]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 12,
+        "high": 23
+      },
+      "direct_transition": "Recurrent_MDD_Onset"
+    },
+    "Recurrent_MDD_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "depression_condition",
+      "target_encounter": "Recurrence_Wellness_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "370143000",
+          "display": "Major depressive disorder (disorder)"
+        }
+      ],
+      "remarks": [
+        "Re-enters the shared care plan / SSRI / maintenance flow. The EncounterEnd in that flow ",
+        "closes this wellness encounter."
+      ],
+      "direct_transition": "Start_Depression_CarePlan"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

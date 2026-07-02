@@ -1,0 +1,349 @@
+{
+  "name": "Low Back Pain",
+  "remarks": [
+    "This module models recurring episodes of ACUTE mechanical low back pain. It deliberately ",
+    "does NOT model chronic low back pain: the 'Prescribing Opioids for Chronic Pain' module ",
+    "already onsets SNOMED 278860009 'Chronic low back pain (finding)' for its chronic-pain ",
+    "cohort. Each episode here uses SNOMED 279039007 'Low back pain (finding)' and is closed ",
+    "with a ConditionEnd when the episode resolves.",
+    "Epidemiology: low back pain is among the most common reasons for ambulatory care visits. ",
+    "Lifetime prevalence is roughly 80%; point prevalence in adults is on the order of 10-25%. ",
+    "This model gives 90% of people susceptibility, with a ~4.5% annual episode probability in ",
+    "adults aged ~20-70 (90% x cumulative 50-year risk of ~90% = ~80% lifetime prevalence), and ",
+    "faster recurrence after a first episode (roughly one episode every 3-10 years).",
+    "Sources: ",
+    "Hoy D, et al. 'The epidemiology of low back pain.' Best Pract Res Clin Rheumatol. 2010;24(6):769-781. ",
+    "Deyo RA, Mirza SK, Martin BI. 'Back pain prevalence and visit rates.' Spine. 2006;31(23):2724-2727. ",
+    "Chou R, et al. 'Diagnosis and treatment of low back pain.' Ann Intern Med. 2007;147(7):478-491. ",
+    "(Most acute episodes resolve within 4-6 weeks; imaging is not recommended for uncomplicated ",
+    "acute low back pain, so only the persistent ~20% receive imaging and physical therapy here.)"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "90% of people are susceptible to mechanical low back pain during their lifetime."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.9,
+          "transition": "Delay_Until_Adulthood"
+        },
+        {
+          "distribution": 0.1,
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Delay_Until_Adulthood": {
+      "type": "Delay",
+      "range": {
+        "low": 20,
+        "high": 30,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Risk"
+    },
+    "Annual_Risk": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Risk_Check"
+    },
+    "Annual_Risk_Check": {
+      "type": "Simple",
+      "remarks": [
+        "New first episodes are modeled through age 70; ~4.5% annual probability."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 70,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.045,
+              "transition": "Acute_LBP_Onset"
+            },
+            {
+              "distribution": 0.955,
+              "transition": "Annual_Risk"
+            }
+          ]
+        }
+      ]
+    },
+    "Acute_LBP_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Episode_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "279039007",
+          "display": "Low back pain (finding)"
+        }
+      ],
+      "direct_transition": "Set_LBP_History"
+    },
+    "Set_LBP_History": {
+      "type": "SetAttribute",
+      "attribute": "low_back_pain_history",
+      "value": true,
+      "remarks": [
+        "Boolean flag so other modules can key off a history of low back pain."
+      ],
+      "direct_transition": "Back_Pain_Symptom"
+    },
+    "Back_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Low Back Pain",
+      "cause": "Low Back Pain",
+      "range": {
+        "low": 30,
+        "high": 80
+      },
+      "direct_transition": "Episode_Encounter"
+    },
+    "Episode_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Acute_LBP_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "LBP_Pain_Observation"
+    },
+    "LBP_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 3,
+        "high": 7
+      },
+      "direct_transition": "Prescribe_NSAID"
+    },
+    "Prescribe_NSAID": {
+      "type": "MedicationOrder",
+      "reason": "Acute_LBP_Onset",
+      "remarks": [
+        "First-line pharmacologic treatment for acute low back pain is an NSAID. ",
+        "Ibuprofen code reused from medications/otc_pain_reliever.json."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "310965",
+          "display": "Ibuprofen 200 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "as_needed": true
+      },
+      "direct_transition": "End_Episode_Encounter"
+    },
+    "End_Episode_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Initial_Recovery_Period"
+    },
+    "Initial_Recovery_Period": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 6,
+        "unit": "weeks"
+      },
+      "remarks": [
+        "~80% of acute episodes resolve within 2-6 weeks with conservative management. ",
+        "The remaining ~20% have persistent symptoms and return for follow-up."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.8,
+          "transition": "Episode_Resolves"
+        },
+        {
+          "distribution": 0.2,
+          "transition": "Persistent_Symptoms_Encounter"
+        }
+      ]
+    },
+    "Persistent_Symptoms_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Acute_LBP_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Imaging_Selection"
+    },
+    "Imaging_Selection": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.65,
+          "transition": "Lumbar_Spine_Xray"
+        },
+        {
+          "distribution": 0.35,
+          "transition": "Lumbar_Spine_MRI"
+        }
+      ]
+    },
+    "Lumbar_Spine_Xray": {
+      "type": "Procedure",
+      "reason": "Acute_LBP_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "22791004",
+          "display": "Plain X-ray of lumbosacral spine (procedure)"
+        }
+      ],
+      "direct_transition": "Physical_Therapy_CarePlan"
+    },
+    "Lumbar_Spine_MRI": {
+      "type": "Procedure",
+      "reason": "Acute_LBP_Onset",
+      "remarks": [
+        "MRI of spine code reused from spina_bifida.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "241645008",
+          "display": "Magnetic resonance imaging of spine (procedure)"
+        }
+      ],
+      "direct_transition": "Physical_Therapy_CarePlan"
+    },
+    "Physical_Therapy_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "Acute_LBP_Onset",
+      "remarks": [
+        "Physiotherapy care plan code reused from injuries.json; activity codes reused ",
+        "from home_health_treatment.json and gout.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "773513001",
+          "display": "Physiotherapy care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "91251008",
+          "display": "Physical therapy procedure (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "183301007",
+          "display": "Physical exercises (regime/therapy)"
+        }
+      ],
+      "direct_transition": "End_Persistent_Encounter"
+    },
+    "End_Persistent_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Physical_Therapy_Course"
+    },
+    "Physical_Therapy_Course": {
+      "type": "Delay",
+      "range": {
+        "low": 4,
+        "high": 8,
+        "unit": "weeks"
+      },
+      "direct_transition": "End_Physical_Therapy_CarePlan"
+    },
+    "End_Physical_Therapy_CarePlan": {
+      "type": "CarePlanEnd",
+      "careplan": "Physical_Therapy_CarePlan",
+      "direct_transition": "Episode_Resolves"
+    },
+    "Episode_Resolves": {
+      "type": "MedicationEnd",
+      "medication_order": "Prescribe_NSAID",
+      "direct_transition": "LBP_Condition_Ends"
+    },
+    "LBP_Condition_Ends": {
+      "type": "ConditionEnd",
+      "condition_onset": "Acute_LBP_Onset",
+      "direct_transition": "Back_Pain_Symptom_Ends"
+    },
+    "Back_Pain_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Low Back Pain",
+      "cause": "Low Back Pain",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Wait_For_Recurrence"
+    },
+    "Wait_For_Recurrence": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 3,
+        "unit": "years"
+      },
+      "remarks": [
+        "Recurrence is common after a first episode: with a 30% chance per 1-3 year cycle, ",
+        "the average inter-episode interval is roughly 6-7 years. New episodes stop after age 70."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 70,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.3,
+              "transition": "Acute_LBP_Onset"
+            },
+            {
+              "distribution": 0.7,
+              "transition": "Wait_For_Recurrence"
+            }
+          ]
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

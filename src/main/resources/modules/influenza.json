@@ -1,0 +1,424 @@
+{
+  "name": "Influenza",
+  "remarks": [
+    "Seasonal influenza modeled as a recurring annual attack probability. NOTE: the Synthea engine has no ",
+    "concept of seasons, so the seasonal epidemic is smeared into a uniform monthly hazard (~0.5%/month, ",
+    "~5.8%/year) rather than clustering in winter months.",
+    "Attack rate: CDC modeling estimates a median symptomatic influenza attack rate of ~8% of the US ",
+    "population per season, ranging 3-11% (Tokars, Olsen & Reed, Clin Infect Dis 2018, ",
+    "https://pubmed.ncbi.nlm.nih.gov/29342247/). This module uses ~5.8%/year for ages 5+; infants and ",
+    "toddlers are excluded for simplicity.",
+    "About half of symptomatic cases never seek care and are modeled here with symptoms but no encounter or ",
+    "diagnosis. Severity is much higher at age 65+ and in patients with chronic comorbidities; 50-70% of ",
+    "flu-related hospitalizations occur in adults 65+ (https://www.cdc.gov/flu/about/burden/index.html).",
+    "The complicated branch models an inpatient influenza stay only. It deliberately does NOT diagnose ",
+    "secondary bacterial pneumonia (that lives in pneumonia.json); instead it sets a temporary ",
+    "'recent_influenza' attribute (true on admission, cleared after convalescence) that other modules may use.",
+    "Oseltamivir is prescribed for a minority of ambulatory cases and for hospitalized cases.",
+    "Codes: SNOMED 6142004 Influenza (disorder) and RxNorm 312122 oseltamivir 75 MG Oral Capsule verified ",
+    "against terminology browsers (not previously used in Synthea); all other codes reused from existing ",
+    "modules."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 5,
+        "unit": "years"
+      },
+      "direct_transition": "Wait_For_Influenza"
+    },
+    "Wait_For_Influenza": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "distributed_transition": [
+        {
+          "distribution": 0.005,
+          "transition": "Flu_Symptom_Fever"
+        },
+        {
+          "distribution": 0.995,
+          "transition": "Wait_For_Influenza"
+        }
+      ]
+    },
+    "Flu_Symptom_Fever": {
+      "type": "Symptom",
+      "symptom": "Fever",
+      "range": {
+        "low": 60,
+        "high": 90
+      },
+      "direct_transition": "Flu_Symptom_Cough"
+    },
+    "Flu_Symptom_Cough": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "Flu_Symptom_Body_Aches"
+    },
+    "Flu_Symptom_Body_Aches": {
+      "type": "Symptom",
+      "symptom": "Body Aches",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Symptomatic_Period"
+    },
+    "Symptomatic_Period": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 3,
+        "unit": "days"
+      },
+      "direct_transition": "Care_Decision"
+    },
+    "Care_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Elderly and chronically ill patients are far more likely to be hospitalized with influenza.",
+        "Attribute names verified against existing modules: chf, copd_variant, diabetes."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Age",
+                "operator": ">=",
+                "quantity": 65,
+                "unit": "years"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "chf",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "copd_variant",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "distribution": 0.12,
+              "transition": "Flu_Dx_Inpatient"
+            },
+            {
+              "distribution": 0.68,
+              "transition": "Flu_Dx_Ambulatory"
+            },
+            {
+              "distribution": 0.2,
+              "transition": "Self_Care"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.01,
+              "transition": "Flu_Dx_Inpatient"
+            },
+            {
+              "distribution": 0.49,
+              "transition": "Flu_Dx_Ambulatory"
+            },
+            {
+              "distribution": 0.5,
+              "transition": "Self_Care"
+            }
+          ]
+        }
+      ]
+    },
+    "Self_Care": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 2,
+        "unit": "weeks"
+      },
+      "remarks": [
+        "Roughly half of symptomatic influenza never presents for care: symptoms resolve at home with no ",
+        "encounter and no recorded diagnosis."
+      ],
+      "direct_transition": "Fever_Subsides"
+    },
+    "Flu_Dx_Ambulatory": {
+      "type": "ConditionOnset",
+      "target_encounter": "Flu_Ambulatory_Encounter",
+      "assign_to_attribute": "influenza_infection",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "6142004",
+          "display": "Influenza (disorder)"
+        }
+      ],
+      "direct_transition": "Flu_Ambulatory_Encounter"
+    },
+    "Flu_Ambulatory_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "influenza_infection",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Take_Temperature"
+    },
+    "Take_Temperature": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "Cel",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8310-5",
+          "display": "Body temperature"
+        }
+      ],
+      "range": {
+        "low": 38.3,
+        "high": 40
+      },
+      "direct_transition": "Antiviral_Decision"
+    },
+    "Antiviral_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Most ambulatory influenza receives supportive care only; a minority presenting early receives ",
+        "oseltamivir."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.3,
+          "transition": "Prescribe_Oseltamivir"
+        },
+        {
+          "distribution": 0.7,
+          "transition": "End_Ambulatory_Encounter"
+        }
+      ]
+    },
+    "Prescribe_Oseltamivir": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "flu_antiviral",
+      "reason": "influenza_infection",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "312122",
+          "display": "oseltamivir 75 MG Oral Capsule"
+        }
+      ],
+      "direct_transition": "End_Ambulatory_Encounter"
+    },
+    "End_Ambulatory_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Ambulatory_Recovery"
+    },
+    "Ambulatory_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 2,
+        "unit": "weeks"
+      },
+      "direct_transition": "Check_Antiviral"
+    },
+    "Check_Antiviral": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "flu_antiviral",
+            "operator": "is not nil"
+          },
+          "transition": "End_Oseltamivir"
+        },
+        {
+          "transition": "Flu_Resolves"
+        }
+      ]
+    },
+    "End_Oseltamivir": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "flu_antiviral",
+      "direct_transition": "Clear_Flu_Antiviral"
+    },
+    "Clear_Flu_Antiviral": {
+      "type": "SetAttribute",
+      "attribute": "flu_antiviral",
+      "remarks": [
+        "Clears the attribute so a future episode without an antiviral does not try to end an ",
+        "already-ended medication. Pattern follows urinary_tract_infections.json attribute clearing."
+      ],
+      "direct_transition": "Flu_Resolves"
+    },
+    "Flu_Dx_Inpatient": {
+      "type": "ConditionOnset",
+      "target_encounter": "Flu_Inpatient_Encounter",
+      "assign_to_attribute": "influenza_infection",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "6142004",
+          "display": "Influenza (disorder)"
+        }
+      ],
+      "direct_transition": "Flu_Inpatient_Encounter"
+    },
+    "Flu_Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "influenza_infection",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "32485007",
+          "display": "Hospital admission (procedure)"
+        }
+      ],
+      "direct_transition": "Inpatient_Oxygen_Saturation"
+    },
+    "Inpatient_Oxygen_Saturation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "%",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2708-6",
+          "display": "Oxygen saturation in Arterial blood"
+        },
+        {
+          "system": "LOINC",
+          "code": "59408-5",
+          "display": "Oxygen saturation in Arterial blood by Pulse oximetry"
+        }
+      ],
+      "range": {
+        "low": 86,
+        "high": 94
+      },
+      "direct_transition": "Inpatient_Oseltamivir"
+    },
+    "Inpatient_Oseltamivir": {
+      "type": "MedicationOrder",
+      "reason": "influenza_infection",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "312122",
+          "display": "oseltamivir 75 MG Oral Capsule"
+        }
+      ],
+      "direct_transition": "Set_Recent_Influenza"
+    },
+    "Set_Recent_Influenza": {
+      "type": "SetAttribute",
+      "attribute": "recent_influenza",
+      "value": true,
+      "remarks": [
+        "Marks a severe influenza episode; cleared after convalescence. Other modules (e.g. pneumonia) may ",
+        "use this to correlate secondary infections without duplicating diagnoses."
+      ],
+      "direct_transition": "Inpatient_Flu_Stay"
+    },
+    "Inpatient_Flu_Stay": {
+      "type": "Delay",
+      "range": {
+        "low": 4,
+        "high": 8,
+        "unit": "days"
+      },
+      "direct_transition": "End_Inpatient_Oseltamivir"
+    },
+    "End_Inpatient_Oseltamivir": {
+      "type": "MedicationEnd",
+      "medication_order": "Inpatient_Oseltamivir",
+      "direct_transition": "Flu_Hospital_Discharge"
+    },
+    "Flu_Hospital_Discharge": {
+      "type": "EncounterEnd",
+      "direct_transition": "Inpatient_Convalescence"
+    },
+    "Inpatient_Convalescence": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 4,
+        "unit": "weeks"
+      },
+      "direct_transition": "Clear_Recent_Influenza"
+    },
+    "Clear_Recent_Influenza": {
+      "type": "SetAttribute",
+      "attribute": "recent_influenza",
+      "value": false,
+      "direct_transition": "Flu_Resolves"
+    },
+    "Flu_Resolves": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "influenza_infection",
+      "direct_transition": "Fever_Subsides"
+    },
+    "Fever_Subsides": {
+      "type": "Symptom",
+      "symptom": "Fever",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Cough_Subsides"
+    },
+    "Cough_Subsides": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Aches_Subside"
+    },
+    "Aches_Subside": {
+      "type": "Symptom",
+      "symptom": "Body Aches",
+      "exact": {
+        "quantity": 0
+      },
+      "remarks": [
+        "Looping back allows repeated influenza episodes across the lifetime."
+      ],
+      "direct_transition": "Wait_For_Influenza"
+    }
+  },
+  "gmf_version": 2
+}

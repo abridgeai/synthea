@@ -1,0 +1,498 @@
+{
+  "name": "Migraine",
+  "remarks": [
+    "This module models episodic migraine (NOT transformed/chronic migraine, which is modeled ",
+    "separately in the 'Prescribing Opioids for Chronic Pain' module using SNOMED 95655000 ",
+    "'Transformed migraine (disorder)'). This module uses SNOMED 37796009 'Migraine (disorder)'. ",
+    "Prevalence: roughly 12% of the U.S. population experiences migraine, with a strong female ",
+    "skew (~18% of women, ~6% of men). Onset is typically between ages 12 and 40.",
+    "Sources: ",
+    "Lipton RB, et al. 'Migraine prevalence, disease burden, and the need for preventive therapy.' ",
+    "Neurology. 2007;68(5):343-349. (American Migraine Prevalence and Prevention study)",
+    "Burch RC, et al. 'The prevalence and impact of migraine and severe headache in the United States.' ",
+    "Headache. 2018;58(4):496-505.",
+    "Treatment model: abortive therapy with sumatriptan for all diagnosed patients; roughly 30% ",
+    "have frequent attacks warranting prophylaxis (propranolol or topiramate), with a realistic ",
+    "non-adherence branch (~12% discontinue prophylaxis, some later resume). A small fraction of ",
+    "attacks (~1.5% per 3-month cycle) are severe enough to trigger an ED visit. ",
+    "Many patients improve with age: after age 50 there is a ~8% annual chance of remission ",
+    "(modeled as 2% per 3-month cycle), consistent with declining prevalence in older adults."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "======================================================================",
+        " INCIDENCE: ~18% of women and ~6% of men develop migraine             ",
+        "======================================================================"
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "F"
+          },
+          "distributions": [
+            {
+              "distribution": 0.18,
+              "transition": "Delay_Until_Migraine_Onset"
+            },
+            {
+              "distribution": 0.82,
+              "transition": "Terminal"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "M"
+          },
+          "distributions": [
+            {
+              "distribution": 0.06,
+              "transition": "Delay_Until_Migraine_Onset"
+            },
+            {
+              "distribution": 0.94,
+              "transition": "Terminal"
+            }
+          ]
+        }
+      ]
+    },
+    "Delay_Until_Migraine_Onset": {
+      "type": "Delay",
+      "remarks": [
+        "Migraine most commonly begins between adolescence and age 40."
+      ],
+      "range": {
+        "low": 12,
+        "high": 40,
+        "unit": "years"
+      },
+      "direct_transition": "Migraine_Onset"
+    },
+    "Migraine_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Migraine_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "37796009",
+          "display": "Migraine (disorder)"
+        }
+      ],
+      "direct_transition": "Set_Migraine_Attribute"
+    },
+    "Set_Migraine_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "migraine",
+      "value": true,
+      "remarks": [
+        "Boolean flag so other modules can key off this condition. Note: the opioid ",
+        "prescribing module assigns its transformed-migraine condition to an attribute ",
+        "of the same name; that attribute is write-only in that module, so both remain truthy."
+      ],
+      "direct_transition": "Headache_Symptom"
+    },
+    "Headache_Symptom": {
+      "type": "Symptom",
+      "symptom": "Headache",
+      "cause": "Migraine",
+      "range": {
+        "low": 40,
+        "high": 90
+      },
+      "direct_transition": "Photophobia_Symptom"
+    },
+    "Photophobia_Symptom": {
+      "type": "Symptom",
+      "symptom": "Pain with Bright Lights",
+      "cause": "Migraine",
+      "range": {
+        "low": 20,
+        "high": 70
+      },
+      "direct_transition": "Nausea_Symptom"
+    },
+    "Nausea_Symptom": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Migraine",
+      "range": {
+        "low": 0,
+        "high": 60
+      },
+      "direct_transition": "Migraine_Diagnosis_Encounter"
+    },
+    "Migraine_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Migraine_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Migraine_Pain_Observation"
+    },
+    "Migraine_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 4,
+        "high": 9
+      },
+      "direct_transition": "Prescribe_Sumatriptan"
+    },
+    "Prescribe_Sumatriptan": {
+      "type": "MedicationOrder",
+      "reason": "Migraine_Onset",
+      "remarks": [
+        "Abortive (acute) therapy taken at attack onset."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "313161",
+          "display": "sumatriptan 50 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "as_needed": true
+      },
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Attack_Frequency_Check"
+    },
+    "Attack_Frequency_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Roughly 30% of migraineurs have attacks frequent enough to warrant preventive ",
+        "(prophylactic) therapy. Lipton RB, et al. Neurology. 2007;68(5):343-349 found ",
+        "~39% of migraineurs could benefit from prevention; a smaller share actually receive it."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.3,
+          "transition": "Prophylaxis_Referral_Delay"
+        },
+        {
+          "distribution": 0.7,
+          "transition": "Living_With_Migraine"
+        }
+      ]
+    },
+    "Prophylaxis_Referral_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 6,
+        "unit": "months"
+      },
+      "direct_transition": "Prophylaxis_Encounter"
+    },
+    "Prophylaxis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Migraine_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Prophylaxis_Selection"
+    },
+    "Prophylaxis_Selection": {
+      "type": "Simple",
+      "remarks": [
+        "First-line migraine prophylaxis: beta blocker (propranolol) or topiramate."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.5,
+          "transition": "Prescribe_Propranolol"
+        },
+        {
+          "distribution": 0.5,
+          "transition": "Prescribe_Topiramate"
+        }
+      ]
+    },
+    "Prescribe_Propranolol": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "migraine_prophylaxis",
+      "reason": "Migraine_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "856457",
+          "display": "propranolol hydrochloride 20 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Prophylaxis_Encounter"
+    },
+    "Prescribe_Topiramate": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "migraine_prophylaxis",
+      "reason": "Migraine_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "199888",
+          "display": "topiramate 25 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Prophylaxis_Encounter"
+    },
+    "End_Prophylaxis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Prophylaxis_Adherence_Delay"
+    },
+    "Prophylaxis_Adherence_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 6,
+        "high": 18,
+        "unit": "months"
+      },
+      "remarks": [
+        "Non-adherence to daily preventive medication is common. ~12% of patients in this ",
+        "model discontinue prophylaxis on their own; about half later resume after a follow-up."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.12,
+          "transition": "Stop_Prophylaxis"
+        },
+        {
+          "distribution": 0.88,
+          "transition": "Living_With_Migraine"
+        }
+      ]
+    },
+    "Stop_Prophylaxis": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "migraine_prophylaxis",
+      "direct_transition": "Clear_Prophylaxis_Attribute"
+    },
+    "Clear_Prophylaxis_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "migraine_prophylaxis",
+      "direct_transition": "Off_Prophylaxis_Delay"
+    },
+    "Off_Prophylaxis_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 6,
+        "high": 24,
+        "unit": "months"
+      },
+      "distributed_transition": [
+        {
+          "distribution": 0.5,
+          "transition": "Resume_Prophylaxis_Encounter"
+        },
+        {
+          "distribution": 0.5,
+          "transition": "Living_With_Migraine"
+        }
+      ]
+    },
+    "Resume_Prophylaxis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Migraine_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Prophylaxis_Selection"
+    },
+    "Living_With_Migraine": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 3,
+        "unit": "months"
+      },
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 50,
+            "unit": "years"
+          },
+          "transition": "Remission_Check"
+        },
+        {
+          "transition": "Attack_Check"
+        }
+      ]
+    },
+    "Remission_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Migraine prevalence declines substantially after age 50-60. 2% chance of remission ",
+        "per 3-month cycle is ~8% annually once past age 50."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.02,
+          "transition": "Migraine_Remission_Wellness"
+        },
+        {
+          "distribution": 0.98,
+          "transition": "Attack_Check"
+        }
+      ]
+    },
+    "Attack_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Most attacks are self-managed with abortive medication and are not modeled as ",
+        "separate encounters. ~1.5% of 3-month cycles include an attack severe enough ",
+        "for an emergency department visit (status migrainosus / intractable attack)."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.015,
+          "transition": "Severe_Migraine_ED_Visit"
+        },
+        {
+          "distribution": 0.985,
+          "transition": "Living_With_Migraine"
+        }
+      ]
+    },
+    "Severe_Migraine_ED_Visit": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "Migraine_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "ED_Pain_Observation"
+    },
+    "ED_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 7,
+        "high": 10
+      },
+      "direct_transition": "End_ED_Visit"
+    },
+    "End_ED_Visit": {
+      "type": "EncounterEnd",
+      "direct_transition": "Living_With_Migraine"
+    },
+    "Migraine_Remission_Wellness": {
+      "type": "Encounter",
+      "wellness": true,
+      "reason": "Migraine_Onset",
+      "remarks": [
+        "Remission is recorded at the next scheduled wellness visit."
+      ],
+      "direct_transition": "End_Sumatriptan"
+    },
+    "End_Sumatriptan": {
+      "type": "MedicationEnd",
+      "medication_order": "Prescribe_Sumatriptan",
+      "direct_transition": "Prophylaxis_End_Check"
+    },
+    "Prophylaxis_End_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "migraine_prophylaxis",
+            "operator": "is not nil"
+          },
+          "transition": "End_Prophylaxis_Medication"
+        },
+        {
+          "transition": "Migraine_Ends"
+        }
+      ]
+    },
+    "End_Prophylaxis_Medication": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "migraine_prophylaxis",
+      "direct_transition": "Migraine_Ends"
+    },
+    "Migraine_Ends": {
+      "type": "ConditionEnd",
+      "condition_onset": "Migraine_Onset",
+      "direct_transition": "Headache_Symptom_Ends"
+    },
+    "Headache_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Headache",
+      "cause": "Migraine",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Photophobia_Symptom_Ends"
+    },
+    "Photophobia_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Pain with Bright Lights",
+      "cause": "Migraine",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Nausea_Symptom_Ends"
+    },
+    "Nausea_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Migraine",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "End_Remission_Wellness"
+    },
+    "End_Remission_Wellness": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

@@ -1,0 +1,413 @@
+{
+  "name": "Cellulitis",
+  "remarks": [
+    "Cellulitis and related skin/soft-tissue infection in adults, modeled as recurring acute episodes.",
+    "Incidence: population studies estimate roughly 1-2.5% of adults develop cellulitis each year ",
+    "(Ellis Simonsen et al., Epidemiol Infect 2006, ~24.6 cases of skin and soft tissue infection per 1000 ",
+    "person-years, https://pubmed.ncbi.nlm.nih.gov/16490133/; McNamara et al., Mayo Clin Proc 2007).",
+    "Diabetes substantially increases both incidence and recurrence risk ",
+    "(https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4550206/). This module checks the 'diabetes' attribute ",
+    "set by the metabolic syndrome modules.",
+    "Course: most episodes resolve with 7-10 days of oral antibiotics (cephalexin first line). ~15% worsen, ",
+    "either forming an abscess requiring incision and drainage or progressing to severe infection requiring ",
+    "hospitalization and IV antibiotics (Raff & Kroshinsky, JAMA 2016, ",
+    "https://jamanetwork.com/journals/jama/fullarticle/2533510).",
+    "Recurrence: cellulitis recurs in roughly 8-20% of patients within 1-3 years, more often in diabetics ",
+    "(OPTIMISE/PATCH trials literature).",
+    "Monthly incidence used below: diabetics 0.003/month (~3.5%/yr), others 0.0012/month (~1.4%/yr).",
+    "Codes reused from existing modules: cephalexin and ceftriaxone from uti/abx_tx.json, doxycycline from ",
+    "sinusitis.json, encounter codes from sinusitis/self_harm/spina_bifida. SNOMED 128045006 Cellulitis ",
+    "(disorder) and 446403000 Incision and drainage of abscess of skin (procedure) verified against SNOMED ",
+    "browsers (not previously used in Synthea)."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Adult_Guard"
+    },
+    "Adult_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 18,
+        "unit": "years"
+      },
+      "direct_transition": "Wait_For_Cellulitis"
+    },
+    "Wait_For_Cellulitis": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "diabetes",
+            "operator": "==",
+            "value": true
+          },
+          "distributions": [
+            {
+              "distribution": 0.003,
+              "transition": "Symptom_Skin_Redness"
+            },
+            {
+              "distribution": 0.997,
+              "transition": "Wait_For_Cellulitis"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.0012,
+              "transition": "Symptom_Skin_Redness"
+            },
+            {
+              "distribution": 0.9988,
+              "transition": "Wait_For_Cellulitis"
+            }
+          ]
+        }
+      ]
+    },
+    "Symptom_Skin_Redness": {
+      "type": "Symptom",
+      "symptom": "Skin Redness",
+      "range": {
+        "low": 50,
+        "high": 80
+      },
+      "direct_transition": "Symptom_Skin_Swelling"
+    },
+    "Symptom_Skin_Swelling": {
+      "type": "Symptom",
+      "symptom": "Skin Swelling",
+      "range": {
+        "low": 40,
+        "high": 70
+      },
+      "direct_transition": "Wait_To_Seek_Care"
+    },
+    "Wait_To_Seek_Care": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 5,
+        "unit": "days"
+      },
+      "direct_transition": "Cellulitis_Onset"
+    },
+    "Cellulitis_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Cellulitis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "128045006",
+          "display": "Cellulitis (disorder)"
+        }
+      ],
+      "direct_transition": "Cellulitis_Encounter"
+    },
+    "Cellulitis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Take_Temperature"
+    },
+    "Take_Temperature": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "Cel",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8310-5",
+          "display": "Body temperature"
+        }
+      ],
+      "range": {
+        "low": 37,
+        "high": 38.5
+      },
+      "direct_transition": "Antibiotic_Selection"
+    },
+    "Antibiotic_Selection": {
+      "type": "Simple",
+      "remarks": [
+        "Cephalexin is first-line for uncomplicated cellulitis; doxycycline for beta-lactam allergic patients.",
+        "Allergy check pattern follows sinusitis.json."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "Prescribe_Doxycycline"
+        },
+        {
+          "transition": "Prescribe_Cephalexin"
+        }
+      ]
+    },
+    "Prescribe_Cephalexin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cellulitis_antibiotic",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "197454",
+          "display": "cephalexin 500 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_Cellulitis_Encounter"
+    },
+    "Prescribe_Doxycycline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cellulitis_antibiotic",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1649987",
+          "display": "doxycycline hyclate 100 MG"
+        }
+      ],
+      "direct_transition": "End_Cellulitis_Encounter"
+    },
+    "End_Cellulitis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Oral_Treatment_Course"
+    },
+    "Oral_Treatment_Course": {
+      "type": "Delay",
+      "range": {
+        "low": 7,
+        "high": 10,
+        "unit": "days"
+      },
+      "remarks": [
+        "~85% of cellulitis episodes resolve with oral therapy in 1-2 weeks; ~15% worsen."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "End_Oral_Antibiotic"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Cellulitis_Worsens"
+        }
+      ]
+    },
+    "End_Oral_Antibiotic": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "cellulitis_antibiotic",
+      "direct_transition": "Cellulitis_Resolves"
+    },
+    "Cellulitis_Worsens": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.6,
+          "transition": "Abscess_Followup_Encounter"
+        },
+        {
+          "distribution": 0.4,
+          "transition": "Stop_Oral_Antibiotic_For_Admission"
+        }
+      ]
+    },
+    "Abscess_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Incision_And_Drainage"
+    },
+    "Incision_And_Drainage": {
+      "type": "Procedure",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "446403000",
+          "display": "Incision and drainage of abscess of skin (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 45,
+        "unit": "minutes"
+      },
+      "direct_transition": "End_Abscess_Encounter"
+    },
+    "End_Abscess_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Post_Drainage_Recovery"
+    },
+    "Post_Drainage_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 2,
+        "unit": "weeks"
+      },
+      "direct_transition": "End_Oral_Antibiotic"
+    },
+    "Stop_Oral_Antibiotic_For_Admission": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "cellulitis_antibiotic",
+      "remarks": [
+        "Oral therapy is stopped when the patient is admitted and switched to IV antibiotics."
+      ],
+      "direct_transition": "Severe_Cellulitis_Admission"
+    },
+    "Severe_Cellulitis_Admission": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "32485007",
+          "display": "Hospital admission (procedure)"
+        }
+      ],
+      "direct_transition": "IV_Antibiotic"
+    },
+    "IV_Antibiotic": {
+      "type": "MedicationOrder",
+      "reason": "Cellulitis_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1665021",
+          "display": "ceftriaxone 1000 MG Injection"
+        }
+      ],
+      "direct_transition": "Inpatient_IV_Course"
+    },
+    "Inpatient_IV_Course": {
+      "type": "Delay",
+      "range": {
+        "low": 4,
+        "high": 7,
+        "unit": "days"
+      },
+      "direct_transition": "End_IV_Antibiotic"
+    },
+    "End_IV_Antibiotic": {
+      "type": "MedicationEnd",
+      "medication_order": "IV_Antibiotic",
+      "direct_transition": "Hospital_Discharge"
+    },
+    "Hospital_Discharge": {
+      "type": "EncounterEnd",
+      "direct_transition": "Post_Discharge_Recovery"
+    },
+    "Post_Discharge_Recovery": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "weeks"
+      },
+      "direct_transition": "Cellulitis_Resolves"
+    },
+    "Cellulitis_Resolves": {
+      "type": "ConditionEnd",
+      "condition_onset": "Cellulitis_Onset",
+      "direct_transition": "Redness_Subsides"
+    },
+    "Redness_Subsides": {
+      "type": "Symptom",
+      "symptom": "Skin Redness",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Swelling_Subsides"
+    },
+    "Swelling_Subsides": {
+      "type": "Symptom",
+      "symptom": "Skin Swelling",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Recurrence_Check"
+    },
+    "Recurrence_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Cellulitis recurs frequently, especially in diabetics. Patients who do not recur early remain ",
+        "susceptible via the baseline incidence loop."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "diabetes",
+            "operator": "==",
+            "value": true
+          },
+          "distributions": [
+            {
+              "distribution": 0.25,
+              "transition": "Recurrence_Delay"
+            },
+            {
+              "distribution": 0.75,
+              "transition": "Wait_For_Cellulitis"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.12,
+              "transition": "Recurrence_Delay"
+            },
+            {
+              "distribution": 0.88,
+              "transition": "Wait_For_Cellulitis"
+            }
+          ]
+        }
+      ]
+    },
+    "Recurrence_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 12,
+        "unit": "months"
+      },
+      "direct_transition": "Symptom_Skin_Redness"
+    }
+  },
+  "gmf_version": 2
+}

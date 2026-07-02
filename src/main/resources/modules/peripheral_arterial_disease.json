@@ -238,6 +238,25 @@
           ]
         }
       ],
+      "direct_transition": "Duplex_Set_Impression"
+    },
+    "Duplex_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Hemodynamically significant stenosis of the femoropopliteal segment with monophasic distal waveforms.",
+      "direct_transition": "Duplex_Impression"
+    },
+    "Duplex_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Cilostazol_Order"
     },
     "Cilostazol_Order": {
@@ -511,6 +530,25 @@
           ]
         }
       ],
+      "direct_transition": "CTA_Set_Impression"
+    },
+    "CTA_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Long-segment occlusion of the superficial femoral artery with distal reconstitution via collaterals.",
+      "direct_transition": "CTA_Impression"
+    },
+    "CTA_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "End_CLI_Encounter"
     },
     "End_CLI_Encounter": {

@@ -225,6 +225,25 @@
           ]
         }
       ],
+      "direct_transition": "Venous_US_Set_Impression"
+    },
+    "Venous_US_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Non-compressible lower-extremity vein with intraluminal echogenic material, consistent with acute deep vein thrombosis.",
+      "direct_transition": "Venous_US_Impression"
+    },
+    "Venous_US_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Set_VTE_History"
     },
     "PE_Onset": {
@@ -322,6 +341,25 @@
           ]
         }
       ],
+      "direct_transition": "CTPA_Set_Impression"
+    },
+    "CTPA_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Intraluminal filling defects within the pulmonary arteries consistent with acute pulmonary embolism.",
+      "direct_transition": "CTPA_Impression"
+    },
+    "CTPA_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "PE_ED_End"
     },
     "PE_ED_End": {

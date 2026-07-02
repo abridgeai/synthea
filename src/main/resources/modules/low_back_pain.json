@@ -246,6 +246,48 @@
           ]
         }
       ],
+      "direct_transition": "LBP_Xray_Impression_Picker"
+    },
+    "LBP_Xray_Impression_Picker": {
+      "type": "Simple",
+      "remarks": [
+        "Plain films for low back pain are ordered to exclude red-flag pathology and are ",
+        "usually unremarkable or show only degenerative change."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.7,
+          "transition": "LBP_Xray_Set_Degenerative"
+        },
+        {
+          "distribution": 0.3,
+          "transition": "LBP_Xray_Set_Normal"
+        }
+      ]
+    },
+    "LBP_Xray_Set_Degenerative": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute fracture or malalignment. Mild multilevel degenerative changes.",
+      "direct_transition": "LBP_Xray_Impression"
+    },
+    "LBP_Xray_Set_Normal": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute osseous abnormality.",
+      "direct_transition": "LBP_Xray_Impression"
+    },
+    "LBP_Xray_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Physical_Therapy_CarePlan"
     },
     "Lumbar_Spine_MRI": {
@@ -283,6 +325,54 @@
           ]
         }
       ],
+      "direct_transition": "LBP_MRI_Impression_Picker"
+    },
+    "LBP_MRI_Impression_Picker": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.5,
+          "transition": "LBP_MRI_Set_Degenerative"
+        },
+        {
+          "distribution": 0.35,
+          "transition": "LBP_MRI_Set_Normal"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "LBP_MRI_Set_Herniation"
+        }
+      ]
+    },
+    "LBP_MRI_Set_Degenerative": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Multilevel degenerative disc disease without significant central canal stenosis.",
+      "direct_transition": "LBP_MRI_Impression"
+    },
+    "LBP_MRI_Set_Normal": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No significant abnormality of the lumbar spine.",
+      "direct_transition": "LBP_MRI_Impression"
+    },
+    "LBP_MRI_Set_Herniation": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Disc herniation with nerve root impingement.",
+      "direct_transition": "LBP_MRI_Impression"
+    },
+    "LBP_MRI_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Physical_Therapy_CarePlan"
     },
     "Physical_Therapy_CarePlan": {

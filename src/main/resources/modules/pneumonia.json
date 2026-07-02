@@ -298,6 +298,25 @@
           ]
         }
       ],
+      "direct_transition": "CXR_Amb_Set_Impression"
+    },
+    "CXR_Amb_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Focal airspace opacity in the lower lung consistent with community-acquired pneumonia. No pleural effusion or pneumothorax.",
+      "direct_transition": "CXR_Amb_Impression"
+    },
+    "CXR_Amb_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Take_Temperature"
     },
     "Take_Temperature": {
@@ -465,6 +484,47 @@
           ]
         }
       ],
+      "direct_transition": "CXR_ED_Impression_Picker"
+    },
+    "CXR_ED_Impression_Picker": {
+      "type": "Simple",
+      "remarks": [
+        "ED patients present sicker; a larger share have multilobar involvement."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.6,
+          "transition": "CXR_ED_Set_Focal"
+        },
+        {
+          "distribution": 0.4,
+          "transition": "CXR_ED_Set_Multilobar"
+        }
+      ]
+    },
+    "CXR_ED_Set_Focal": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Lobar consolidation consistent with pneumonia. No pleural effusion.",
+      "direct_transition": "CXR_ED_Impression"
+    },
+    "CXR_ED_Set_Multilobar": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Multifocal airspace opacities consistent with multilobar pneumonia.",
+      "direct_transition": "CXR_ED_Impression"
+    },
+    "CXR_ED_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "ED_Oxygen_Saturation"
     },
     "ED_Oxygen_Saturation": {

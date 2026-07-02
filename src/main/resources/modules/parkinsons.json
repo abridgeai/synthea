@@ -191,6 +191,48 @@
           ]
         }
       ],
+      "direct_transition": "Brain_MRI_Impression_Picker"
+    },
+    "Brain_MRI_Impression_Picker": {
+      "type": "Simple",
+      "remarks": [
+        "Structural MRI in idiopathic Parkinson disease is typically normal or shows only ",
+        "age-related change; its role is to exclude a secondary cause."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "Brain_MRI_Set_Normal"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Brain_MRI_Set_AgeRelated"
+        }
+      ]
+    },
+    "Brain_MRI_Set_Normal": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No structural cause of parkinsonism identified; findings consistent with idiopathic Parkinson disease.",
+      "direct_transition": "Brain_MRI_Impression"
+    },
+    "Brain_MRI_Set_AgeRelated": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Mild age-related atrophy and chronic small-vessel ischemic changes; no acute abnormality.",
+      "direct_transition": "Brain_MRI_Impression"
+    },
+    "Brain_MRI_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Prescribe_Levodopa"
     },
     "Prescribe_Levodopa": {

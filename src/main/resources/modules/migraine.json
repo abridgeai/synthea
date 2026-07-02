@@ -214,6 +214,48 @@
           ]
         }
       ],
+      "direct_transition": "Migraine_MRI_Impression_Picker"
+    },
+    "Migraine_MRI_Impression_Picker": {
+      "type": "Simple",
+      "remarks": [
+        "Brain MRI in migraine is almost always normal; a small share shows nonspecific ",
+        "white-matter changes."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.9,
+          "transition": "Migraine_MRI_Set_Normal"
+        },
+        {
+          "distribution": 0.1,
+          "transition": "Migraine_MRI_Set_Nonspecific"
+        }
+      ]
+    },
+    "Migraine_MRI_Set_Normal": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute intracranial abnormality; no secondary cause of headache identified.",
+      "direct_transition": "Migraine_MRI_Impression"
+    },
+    "Migraine_MRI_Set_Nonspecific": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Nonspecific scattered white-matter T2 hyperintensities of uncertain significance.",
+      "direct_transition": "Migraine_MRI_Impression"
+    },
+    "Migraine_MRI_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Prescribe_Sumatriptan"
     },
     "Prescribe_Sumatriptan": {
@@ -511,6 +553,25 @@
           ]
         }
       ],
+      "direct_transition": "Migraine_CT_Set_Impression"
+    },
+    "Migraine_CT_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute intracranial hemorrhage, mass effect, or midline shift.",
+      "direct_transition": "Migraine_CT_Impression"
+    },
+    "Migraine_CT_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "End_ED_Visit"
     },
     "End_ED_Visit": {

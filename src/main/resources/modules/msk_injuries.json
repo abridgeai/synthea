@@ -197,6 +197,25 @@
           ]
         }
       ],
+      "direct_transition": "Ankle_Xray_Set_Impression"
+    },
+    "Ankle_Xray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute fracture or dislocation; findings consistent with soft-tissue (ligamentous) injury.",
+      "direct_transition": "Ankle_Xray_Impression"
+    },
+    "Ankle_Xray_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Ankle_Analgesic"
     },
     "Ankle_Analgesic": {
@@ -364,6 +383,25 @@
           ]
         }
       ],
+      "direct_transition": "Wrist_Xray_Set_Impression"
+    },
+    "Wrist_Xray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Fracture of the distal radius with dorsal angulation.",
+      "direct_transition": "Wrist_Xray_Impression"
+    },
+    "Wrist_Xray_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Wrist_Immobilization"
     },
     "Wrist_Immobilization": {
@@ -541,6 +579,25 @@
           ]
         }
       ],
+      "direct_transition": "Knee_Xray_Set_Impression"
+    },
+    "Knee_Xray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute fracture; small joint effusion.",
+      "direct_transition": "Knee_Xray_Impression"
+    },
+    "Knee_Xray_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Knee_MRI"
     },
     "Knee_MRI": {
@@ -579,6 +636,25 @@
           ]
         }
       ],
+      "direct_transition": "Knee_MRI_Set_Impression"
+    },
+    "Knee_MRI_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Tear of the medial meniscus. No fracture.",
+      "direct_transition": "Knee_MRI_Impression"
+    },
+    "Knee_MRI_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Knee_Analgesic"
     },
     "Knee_Analgesic": {
@@ -726,6 +802,25 @@
           ]
         }
       ],
+      "direct_transition": "Head_CT_Set_Impression"
+    },
+    "Head_CT_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute intracranial hemorrhage or skull fracture.",
+      "direct_transition": "Head_CT_Impression"
+    },
+    "Head_CT_Impression": {
+      "type": "Observation",
+      "category": "imaging",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "attribute": "imaging_impression",
       "direct_transition": "Concussion_Encounter_End"
     },
     "Concussion_Encounter_End": {

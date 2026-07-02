@@ -200,6 +200,44 @@
         "low": 0.5,
         "high": 0.89
       },
+      "direct_transition": "Arterial_Duplex_US"
+    },
+    "Arterial_Duplex_US": {
+      "type": "ImagingStudy",
+      "reason": "PAD_Onset",
+      "remarks": [
+        "Lower-extremity arterial duplex ultrasound to localize and grade stenoses after an ",
+        "abnormal ABI. Generic ultrasonography SNOMED code; modality is US."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "16310003",
+        "display": "Diagnostic ultrasonography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "61685007",
+            "display": "Lower limb structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "US",
+            "display": "Ultrasound"
+          },
+          "instances": [
+            {
+              "title": "Arterial duplex ultrasonography of the lower extremities",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.6.1",
+                "display": "Ultrasound Image Storage"
+              }
+            }
+          ]
+        }
+      ],
       "direct_transition": "Cilostazol_Order"
     },
     "Cilostazol_Order": {
@@ -435,6 +473,44 @@
         "low": 0.15,
         "high": 0.39
       },
+      "direct_transition": "CTA_Lower_Extremity"
+    },
+    "CTA_Lower_Extremity": {
+      "type": "ImagingStudy",
+      "reason": "CLI_Onset",
+      "remarks": [
+        "CT angiography of the lower-extremity runoff for revascularization planning in ",
+        "critical limb ischemia. Generic CT SNOMED code; modality is CT."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "61685007",
+            "display": "Lower limb structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "CT angiography of the lower-extremity arterial runoff",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
       "direct_transition": "End_CLI_Encounter"
     },
     "End_CLI_Encounter": {

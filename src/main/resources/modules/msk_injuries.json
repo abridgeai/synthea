@@ -1,0 +1,797 @@
+{
+  "name": "Musculoskeletal Injuries",
+  "remarks": [
+    "This module models recurring ACUTE musculoskeletal (MSK) and minor traumatic injuries ",
+    "across the lifetime: ankle sprains, distal-forearm/wrist fractures, internal knee ",
+    "derangement (meniscal tear), and concussion. It exists to add diagnostic-imaging volume ",
+    "to the synthetic population, because acute MSK trauma is one of the most imaging-intensive ",
+    "reasons for ambulatory and emergency care. Each injury drives the imaging that is standard ",
+    "of care: plain radiographs for suspected fracture/sprain, MRI for internal knee derangement, ",
+    "and a non-contrast head CT for concussion. Every imaging event is modeled as an ImagingStudy ",
+    "state (not a bare Procedure) so it exports as a FHIR ImagingStudy resource with DICOM ",
+    "modality/body-site metadata and surfaces in the LLM note context's imaging section.",
+    "Epidemiology: acute MSK injuries are extremely common; ankle sprains alone account for ~2 ",
+    "per 1000 person-years, and distal-radius fractures are the most common fracture in adults. ",
+    "This model gives 85% of people susceptibility with a ~3% annual injury probability from ",
+    "adolescence to age 85, and faster recurrence after a first injury. Codes for conditions, ",
+    "radiographs, immobilization, and care plans are reused from injuries.json.",
+    "Sources: ",
+    "Waterman BR, et al. 'The epidemiology of ankle sprains in the United States.' J Bone Joint ",
+    "Surg Am. 2010;92(13):2279-2284. ",
+    "Nellans KW, Kowalski E, Chung KC. 'The epidemiology of distal radius fractures.' Hand Clin. ",
+    "2012;28(2):113-125."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "85% of people sustain at least one acute MSK/traumatic injury during their lifetime."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "Delay_Until_Active"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Delay_Until_Active": {
+      "type": "Delay",
+      "remarks": [
+        "Risk begins in adolescence once children are physically active in sports/recreation."
+      ],
+      "range": {
+        "low": 12,
+        "high": 18,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Risk"
+    },
+    "Annual_Risk": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Risk_Check"
+    },
+    "Annual_Risk_Check": {
+      "type": "Simple",
+      "remarks": [
+        "~3% annual first-injury probability through age 85."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 85,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.03,
+              "transition": "Injury_Selection"
+            },
+            {
+              "distribution": 0.97,
+              "transition": "Annual_Risk"
+            }
+          ]
+        }
+      ]
+    },
+    "Injury_Selection": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.4,
+          "transition": "Ankle_Sprain_Onset"
+        },
+        {
+          "distribution": 0.25,
+          "transition": "Wrist_Fracture_Onset"
+        },
+        {
+          "distribution": 0.2,
+          "transition": "Knee_Injury_Onset"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Concussion_Onset"
+        }
+      ]
+    },
+    "Ankle_Sprain_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Ankle_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "44465007",
+          "display": "Sprain of ankle (disorder)"
+        }
+      ],
+      "direct_transition": "Ankle_Pain_Symptom"
+    },
+    "Ankle_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Ankle Pain",
+      "cause": "Musculoskeletal Injuries",
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "Ankle_Encounter"
+    },
+    "Ankle_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "Ankle_Sprain_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Ankle_Pain_Observation"
+    },
+    "Ankle_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 3,
+        "high": 7
+      },
+      "direct_transition": "Ankle_Xray"
+    },
+    "Ankle_Xray": {
+      "type": "ImagingStudy",
+      "reason": "Ankle_Sprain_Onset",
+      "remarks": [
+        "Radiograph obtained to exclude fracture per the Ottawa ankle rules. ",
+        "X-ray code and body site reused from injuries.json."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "1290459008",
+        "display": "Plain X-ray of ankle region (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "344001",
+            "display": "Ankle region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "DX",
+            "display": "Digital Radiography"
+          },
+          "instances": [
+            {
+              "title": "AP, lateral, and mortise views of the ankle",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Ankle_Analgesic"
+    },
+    "Ankle_Analgesic": {
+      "type": "MedicationOrder",
+      "reason": "Ankle_Sprain_Onset",
+      "remarks": [
+        "Ibuprofen code reused from medications/otc_pain_reliever.json."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "310965",
+          "display": "Ibuprofen 200 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "as_needed": true
+      },
+      "direct_transition": "Ankle_CarePlan"
+    },
+    "Ankle_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "Ankle_Sprain_Onset",
+      "remarks": [
+        "Musculoskeletal care (RICE, protected weight-bearing). Codes reused from injuries.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "408869004",
+          "display": "Musculoskeletal care (regime/therapy)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "183301007",
+          "display": "Physical exercises (regime/therapy)"
+        }
+      ],
+      "direct_transition": "Ankle_Encounter_End"
+    },
+    "Ankle_Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Ankle_Recovery"
+    },
+    "Ankle_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 6,
+        "unit": "weeks"
+      },
+      "direct_transition": "Ankle_CarePlan_End"
+    },
+    "Ankle_CarePlan_End": {
+      "type": "CarePlanEnd",
+      "careplan": "Ankle_CarePlan",
+      "direct_transition": "Ankle_Med_End"
+    },
+    "Ankle_Med_End": {
+      "type": "MedicationEnd",
+      "medication_order": "Ankle_Analgesic",
+      "direct_transition": "Ankle_Condition_End"
+    },
+    "Ankle_Condition_End": {
+      "type": "ConditionEnd",
+      "condition_onset": "Ankle_Sprain_Onset",
+      "direct_transition": "Ankle_Symptom_End"
+    },
+    "Ankle_Symptom_End": {
+      "type": "Symptom",
+      "symptom": "Ankle Pain",
+      "cause": "Musculoskeletal Injuries",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Wait_For_Recurrence"
+    },
+    "Wrist_Fracture_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Wrist_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "263102004",
+          "display": "Fracture subluxation of wrist (disorder)"
+        }
+      ],
+      "direct_transition": "Wrist_Pain_Symptom"
+    },
+    "Wrist_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Wrist Pain",
+      "cause": "Musculoskeletal Injuries",
+      "range": {
+        "low": 50,
+        "high": 90
+      },
+      "direct_transition": "Wrist_Encounter"
+    },
+    "Wrist_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "Wrist_Fracture_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Wrist_Pain_Observation"
+    },
+    "Wrist_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 5,
+        "high": 9
+      },
+      "direct_transition": "Wrist_Xray"
+    },
+    "Wrist_Xray": {
+      "type": "ImagingStudy",
+      "reason": "Wrist_Fracture_Onset",
+      "remarks": [
+        "X-ray code and body site reused from injuries.json."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "713024005",
+        "display": "Plain X-ray of wrist region (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "8205005",
+            "display": "Wrist region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "DX",
+            "display": "Digital Radiography"
+          },
+          "instances": [
+            {
+              "title": "PA and lateral views of the wrist",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Wrist_Immobilization"
+    },
+    "Wrist_Immobilization": {
+      "type": "Procedure",
+      "reason": "Wrist_Fracture_Onset",
+      "remarks": [
+        "Closed reduction / casting. Bone immobilization code reused from injuries.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "274474001",
+          "display": "Bone immobilization (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 45,
+        "unit": "minutes"
+      },
+      "direct_transition": "Wrist_Analgesic"
+    },
+    "Wrist_Analgesic": {
+      "type": "MedicationOrder",
+      "reason": "Wrist_Fracture_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "310965",
+          "display": "Ibuprofen 200 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "as_needed": true
+      },
+      "direct_transition": "Wrist_CarePlan"
+    },
+    "Wrist_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "Wrist_Fracture_Onset",
+      "remarks": [
+        "Fracture care code reused from injuries.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "385691007",
+          "display": "Fracture care (regime/therapy)"
+        }
+      ],
+      "direct_transition": "Wrist_Encounter_End"
+    },
+    "Wrist_Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Wrist_Recovery"
+    },
+    "Wrist_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 6,
+        "high": 10,
+        "unit": "weeks"
+      },
+      "direct_transition": "Wrist_CarePlan_End"
+    },
+    "Wrist_CarePlan_End": {
+      "type": "CarePlanEnd",
+      "careplan": "Wrist_CarePlan",
+      "direct_transition": "Wrist_Med_End"
+    },
+    "Wrist_Med_End": {
+      "type": "MedicationEnd",
+      "medication_order": "Wrist_Analgesic",
+      "direct_transition": "Wrist_Condition_End"
+    },
+    "Wrist_Condition_End": {
+      "type": "ConditionEnd",
+      "condition_onset": "Wrist_Fracture_Onset",
+      "direct_transition": "Wrist_Symptom_End"
+    },
+    "Wrist_Symptom_End": {
+      "type": "Symptom",
+      "symptom": "Wrist Pain",
+      "cause": "Musculoskeletal Injuries",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Wait_For_Recurrence"
+    },
+    "Knee_Injury_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Knee_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "239720000",
+          "display": "Tear of meniscus of knee (disorder)"
+        }
+      ],
+      "direct_transition": "Knee_Pain_Symptom"
+    },
+    "Knee_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Knee Pain",
+      "cause": "Musculoskeletal Injuries",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Knee_Encounter"
+    },
+    "Knee_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Knee_Injury_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Knee_Pain_Observation"
+    },
+    "Knee_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 3,
+        "high": 7
+      },
+      "direct_transition": "Knee_Xray"
+    },
+    "Knee_Xray": {
+      "type": "ImagingStudy",
+      "reason": "Knee_Injury_Onset",
+      "remarks": [
+        "Initial radiograph to exclude fracture. Code and body site reused from injuries.json."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "1290407002",
+        "display": "Plain X-ray of knee region (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "72696002",
+            "display": "Knee region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "DX",
+            "display": "Digital Radiography"
+          },
+          "instances": [
+            {
+              "title": "AP and lateral views of the knee",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Knee_MRI"
+    },
+    "Knee_MRI": {
+      "type": "ImagingStudy",
+      "reason": "Knee_Injury_Onset",
+      "remarks": [
+        "MRI confirms internal derangement (meniscal/ligamentous injury) when radiographs are ",
+        "negative. Generic MRI SNOMED code; modality is MR."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "113091000",
+        "display": "Magnetic resonance imaging (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "72696002",
+            "display": "Knee region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "MR",
+            "display": "Magnetic Resonance"
+          },
+          "instances": [
+            {
+              "title": "Multi-sequence MRI of the knee",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.4",
+                "display": "MR Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Knee_Analgesic"
+    },
+    "Knee_Analgesic": {
+      "type": "MedicationOrder",
+      "reason": "Knee_Injury_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "310965",
+          "display": "Ibuprofen 200 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "as_needed": true
+      },
+      "direct_transition": "Knee_CarePlan"
+    },
+    "Knee_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "Knee_Injury_Onset",
+      "remarks": [
+        "Physiotherapy-based rehabilitation. Code reused from injuries.json / low_back_pain.json."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "773513001",
+          "display": "Physiotherapy care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "91251008",
+          "display": "Physical therapy procedure (regime/therapy)"
+        }
+      ],
+      "direct_transition": "Knee_Encounter_End"
+    },
+    "Knee_Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Knee_Recovery"
+    },
+    "Knee_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 4,
+        "high": 10,
+        "unit": "weeks"
+      },
+      "direct_transition": "Knee_CarePlan_End"
+    },
+    "Knee_CarePlan_End": {
+      "type": "CarePlanEnd",
+      "careplan": "Knee_CarePlan",
+      "direct_transition": "Knee_Med_End"
+    },
+    "Knee_Med_End": {
+      "type": "MedicationEnd",
+      "medication_order": "Knee_Analgesic",
+      "direct_transition": "Knee_Condition_End"
+    },
+    "Knee_Condition_End": {
+      "type": "ConditionEnd",
+      "condition_onset": "Knee_Injury_Onset",
+      "direct_transition": "Knee_Symptom_End"
+    },
+    "Knee_Symptom_End": {
+      "type": "Symptom",
+      "symptom": "Knee Pain",
+      "cause": "Musculoskeletal Injuries",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Wait_For_Recurrence"
+    },
+    "Concussion_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "Concussion_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "110030002",
+          "display": "Concussion injury of brain (disorder)"
+        }
+      ],
+      "direct_transition": "Concussion_Symptom"
+    },
+    "Concussion_Symptom": {
+      "type": "Symptom",
+      "symptom": "Headache",
+      "cause": "Musculoskeletal Injuries",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Concussion_Encounter"
+    },
+    "Concussion_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "Concussion_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Head_CT"
+    },
+    "Head_CT": {
+      "type": "ImagingStudy",
+      "reason": "Concussion_Onset",
+      "remarks": [
+        "Non-contrast head CT to exclude intracranial hemorrhage per the Canadian CT Head Rule. ",
+        "Generic CT SNOMED code; modality is CT."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "69536005",
+            "display": "Head structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "Non-contrast CT of the head",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Concussion_Encounter_End"
+    },
+    "Concussion_Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Concussion_Recovery"
+    },
+    "Concussion_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 4,
+        "unit": "weeks"
+      },
+      "direct_transition": "Concussion_Condition_End"
+    },
+    "Concussion_Condition_End": {
+      "type": "ConditionEnd",
+      "condition_onset": "Concussion_Onset",
+      "direct_transition": "Concussion_Symptom_End"
+    },
+    "Concussion_Symptom_End": {
+      "type": "Symptom",
+      "symptom": "Headache",
+      "cause": "Musculoskeletal Injuries",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Wait_For_Recurrence"
+    },
+    "Wait_For_Recurrence": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 4,
+        "unit": "years"
+      },
+      "remarks": [
+        "Reinjury is common. New injuries stop after age 85."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 85,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.5,
+              "transition": "Injury_Selection"
+            },
+            {
+              "distribution": 0.5,
+              "transition": "Wait_For_Recurrence"
+            }
+          ]
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

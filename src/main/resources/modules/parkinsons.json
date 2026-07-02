@@ -152,6 +152,45 @@
           "display": "Neurological examination (procedure)"
         }
       ],
+      "direct_transition": "Brain_MRI"
+    },
+    "Brain_MRI": {
+      "type": "ImagingStudy",
+      "reason": "parkinsons_condition",
+      "remarks": [
+        "Structural brain MRI at diagnosis to exclude secondary causes of parkinsonism ",
+        "(vascular disease, normal-pressure hydrocephalus, mass lesions). Generic MRI SNOMED ",
+        "code; modality is MR."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "113091000",
+        "display": "Magnetic resonance imaging (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "12738006",
+            "display": "Brain structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "MR",
+            "display": "Magnetic Resonance"
+          },
+          "instances": [
+            {
+              "title": "MRI of the brain without contrast",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.4",
+                "display": "MR Image Storage"
+              }
+            }
+          ]
+        }
+      ],
       "direct_transition": "Prescribe_Levodopa"
     },
     "Prescribe_Levodopa": {

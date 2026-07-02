@@ -158,6 +158,62 @@
         "low": 4,
         "high": 9
       },
+      "direct_transition": "Diagnostic_Imaging_Decision"
+    },
+    "Diagnostic_Imaging_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Neuroimaging is not routinely indicated for migraine with a typical presentation, but ",
+        "in practice roughly a third of newly diagnosed patients undergo brain MRI to exclude a ",
+        "secondary cause (atypical features, patient/clinician reassurance)."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.3,
+          "transition": "Brain_MRI_Diagnostic"
+        },
+        {
+          "distribution": 0.7,
+          "transition": "Prescribe_Sumatriptan"
+        }
+      ]
+    },
+    "Brain_MRI_Diagnostic": {
+      "type": "ImagingStudy",
+      "reason": "Migraine_Onset",
+      "remarks": [
+        "Outpatient brain MRI to exclude a secondary intracranial cause. Generic MRI SNOMED ",
+        "code; modality is MR."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "113091000",
+        "display": "Magnetic resonance imaging (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "12738006",
+            "display": "Brain structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "MR",
+            "display": "Magnetic Resonance"
+          },
+          "instances": [
+            {
+              "title": "MRI of the brain without contrast",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.4",
+                "display": "MR Image Storage"
+              }
+            }
+          ]
+        }
+      ],
       "direct_transition": "Prescribe_Sumatriptan"
     },
     "Prescribe_Sumatriptan": {
@@ -416,6 +472,45 @@
         "low": 7,
         "high": 10
       },
+      "direct_transition": "Head_CT_ED"
+    },
+    "Head_CT_ED": {
+      "type": "ImagingStudy",
+      "reason": "Migraine_Onset",
+      "remarks": [
+        "Non-contrast head CT during a severe/worst-ever attack (status migrainosus) to exclude ",
+        "subarachnoid hemorrhage and other intracranial emergencies. Code reused from ",
+        "lung_cancer.json / dementia.json families."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "303653007",
+        "display": "Computed tomography of head (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "69536005",
+            "display": "Head structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "Non-contrast CT of the head",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
       "direct_transition": "End_ED_Visit"
     },
     "End_ED_Visit": {

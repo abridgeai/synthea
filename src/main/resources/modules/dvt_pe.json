@@ -194,20 +194,37 @@
       "direct_transition": "Venous_Ultrasound"
     },
     "Venous_Ultrasound": {
-      "type": "Procedure",
+      "type": "ImagingStudy",
       "reason": "DVT_Onset",
-      "codes": [
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "312725000",
+        "display": "Duplex scan of lower limb veins (procedure)"
+      },
+      "series": [
         {
-          "system": "SNOMED-CT",
-          "code": "312725000",
-          "display": "Duplex scan of lower limb veins (procedure)"
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "61685007",
+            "display": "Lower limb structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "US",
+            "display": "Ultrasound"
+          },
+          "instances": [
+            {
+              "title": "Compression duplex ultrasound of lower limb veins",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.6.1",
+                "display": "Ultrasound Image Storage"
+              }
+            }
+          ]
         }
       ],
-      "duration": {
-        "low": 20,
-        "high": 40,
-        "unit": "minutes"
-      },
       "direct_transition": "Set_VTE_History"
     },
     "PE_Onset": {
@@ -274,20 +291,37 @@
       "direct_transition": "CT_Pulmonary_Angiography"
     },
     "CT_Pulmonary_Angiography": {
-      "type": "Procedure",
+      "type": "ImagingStudy",
       "reason": "PE_Onset",
-      "codes": [
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "419225001",
+        "display": "Computed tomography angiography of pulmonary artery (procedure)"
+      },
+      "series": [
         {
-          "system": "SNOMED-CT",
-          "code": "419225001",
-          "display": "Computed tomography angiography of pulmonary artery (procedure)"
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "81040000",
+            "display": "Pulmonary artery structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "CT pulmonary angiogram, contrast-enhanced",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
         }
       ],
-      "duration": {
-        "low": 20,
-        "high": 45,
-        "unit": "minutes"
-      },
       "direct_transition": "PE_ED_End"
     },
     "PE_ED_End": {

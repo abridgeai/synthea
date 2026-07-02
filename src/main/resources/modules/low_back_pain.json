@@ -215,28 +215,72 @@
       ]
     },
     "Lumbar_Spine_Xray": {
-      "type": "Procedure",
+      "type": "ImagingStudy",
       "reason": "Acute_LBP_Onset",
-      "codes": [
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "22791004",
+        "display": "Plain X-ray of lumbosacral spine (procedure)"
+      },
+      "series": [
         {
-          "system": "SNOMED-CT",
-          "code": "22791004",
-          "display": "Plain X-ray of lumbosacral spine (procedure)"
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "122496007",
+            "display": "Lumbar spine structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CR",
+            "display": "Computed Radiography"
+          },
+          "instances": [
+            {
+              "title": "AP and lateral lumbosacral spine radiograph",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
         }
       ],
       "direct_transition": "Physical_Therapy_CarePlan"
     },
     "Lumbar_Spine_MRI": {
-      "type": "Procedure",
+      "type": "ImagingStudy",
       "reason": "Acute_LBP_Onset",
       "remarks": [
         "MRI of spine code reused from spina_bifida.json."
       ],
-      "codes": [
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "241645008",
+        "display": "Magnetic resonance imaging of spine (procedure)"
+      },
+      "series": [
         {
-          "system": "SNOMED-CT",
-          "code": "241645008",
-          "display": "Magnetic resonance imaging of spine (procedure)"
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "122496007",
+            "display": "Lumbar spine structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "MR",
+            "display": "Magnetic Resonance"
+          },
+          "instances": [
+            {
+              "title": "Multi-sequence MRI of the lumbar spine",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.4",
+                "display": "MR Image Storage"
+              }
+            }
+          ]
         }
       ],
       "direct_transition": "Physical_Therapy_CarePlan"

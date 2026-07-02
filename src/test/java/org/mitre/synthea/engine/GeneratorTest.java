@@ -355,4 +355,37 @@ public class GeneratorTest {
       assertTrue((Boolean)p.attributes.get("diabetes"));
     }
   }
+
+  @Test
+  public void keepModuleDoesNotExportDeadOverflowPatients() throws Exception {
+    // With a keep module active, the overflow "export dead patients anyway" path must be
+    // suppressed so the cohort contains only patients that pass the filter and are alive.
+    // Otherwise dead patients would be exported alongside the live replacement generated for the
+    // same slot, wasting downstream work (e.g. LLM note generation) on unwanted patients.
+    Generator.GeneratorOptions opts = new Generator.GeneratorOptions();
+    opts.population = 8;
+    opts.minAge = 60;
+    opts.maxAge = 85; // older cohort raises the chance a kept patient dies during simulation
+    opts.ageSpecified = true;
+    opts.overflow = true;
+    opts.seed = 12345L;
+    opts.keepPatientsModulePath = Path.of("src/test/resources/keep_patients_module/keep.json");
+    // keep module checks that patients have attribute diabetes == true
+
+    Generator generator = new Generator(opts);
+    // internalStore captures every patient that reaches the export gate, living or dead.
+    generator.internalStore = new LinkedList<>();
+    for (int i = 0; i < opts.population; i++) {
+      generator.generatePerson(i);
+    }
+
+    assertTrue("expected patients to be recorded", generator.internalStore.size() > 0);
+    for (Person p : generator.internalStore) {
+      long finishTime = p.lastUpdated + generator.timestep;
+      assertTrue("a dead patient was exported despite an active keep module",
+          p.alive(finishTime));
+      assertTrue("an exported patient failed the keep filter",
+          (Boolean) p.attributes.get("diabetes"));
+    }
+  }
 }

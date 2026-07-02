@@ -226,7 +226,7 @@
       "distributed_transition": [
         {
           "distribution": 0.85,
-          "transition": "Annual_GERD_Delay"
+          "transition": "Control_Heartburn"
         },
         {
           "distribution": 0.15,
@@ -303,12 +303,57 @@
             "attribute": "barretts_condition",
             "operator": "is not nil"
           },
-          "transition": "Barretts_Surveillance_Delay"
+          "transition": "Control_Heartburn_Barretts"
         },
         {
-          "transition": "Annual_GERD_Delay"
+          "transition": "Control_Heartburn"
         }
       ]
+    },
+    "Control_Heartburn": {
+      "type": "Symptom",
+      "symptom": "Heartburn",
+      "cause": "GERD",
+      "remarks": [
+        "On PPI therapy, reflux symptoms are well controlled. Drop to a low residual so a ",
+        "treated GERD patient does not chronically inflate the symptom total and generate ",
+        "spurious symptom-driven visits."
+      ],
+      "exact": {
+        "quantity": 2
+      },
+      "direct_transition": "Control_Regurgitation"
+    },
+    "Control_Regurgitation": {
+      "type": "Symptom",
+      "symptom": "Acid Regurgitation",
+      "cause": "GERD",
+      "exact": {
+        "quantity": 1
+      },
+      "direct_transition": "Annual_GERD_Delay"
+    },
+    "Control_Heartburn_Barretts": {
+      "type": "Symptom",
+      "symptom": "Heartburn",
+      "cause": "GERD",
+      "remarks": [
+        "Barrett's patients remain on long-term PPI therapy with well-controlled reflux ",
+        "symptoms; drop to a low residual before entering the surveillance loop."
+      ],
+      "exact": {
+        "quantity": 2
+      },
+      "direct_transition": "Control_Regurgitation_Barretts"
+    },
+    "Control_Regurgitation_Barretts": {
+      "type": "Symptom",
+      "symptom": "Acid Regurgitation",
+      "cause": "GERD",
+      "exact": {
+        "quantity": 1
+      },
+      "direct_transition": "Barretts_Surveillance_Delay"
     },
     "Barretts_Surveillance_Delay": {
       "type": "Delay",

@@ -415,7 +415,7 @@
     "Apixaban_Course_Complete": {
       "type": "MedicationEnd",
       "referenced_by_attribute": "vte_anticoagulant",
-      "direct_transition": "Recurrence_Wait"
+      "direct_transition": "Resolve_Leg_Pain"
     },
     "Warfarin_Order": {
       "type": "MedicationOrder",
@@ -492,7 +492,7 @@
     "Warfarin_Course_Complete": {
       "type": "MedicationEnd",
       "referenced_by_attribute": "vte_anticoagulant",
-      "direct_transition": "Recurrence_Wait"
+      "direct_transition": "Resolve_Leg_Pain"
     },
     "Anticoagulant_Nonadherence": {
       "type": "MedicationEnd",
@@ -538,7 +538,7 @@
         },
         {
           "distribution": 0.2,
-          "transition": "Recurrence_Wait"
+          "transition": "Resolve_Leg_Pain"
         }
       ]
     },
@@ -564,6 +564,49 @@
           "transition": "Recurrence_Wait"
         }
       ]
+    },
+    "Resolve_Leg_Pain": {
+      "type": "Symptom",
+      "symptom": "Leg Pain",
+      "cause": "Deep venous thrombosis",
+      "remarks": [
+        "VTE symptoms are acute and resolve as the clot is treated. Once anticoagulation is ",
+        "completed (or the patient is off therapy and entering the recurrence-hazard wait), ",
+        "all episode symptoms are cleared to zero so they do not persist across the patient's ",
+        "lifetime. Both DVT and PE symptoms are cleared regardless of which presented, so a ",
+        "subsequent episode of the other type starts from a clean baseline."
+      ],
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Resolve_Leg_Swelling"
+    },
+    "Resolve_Leg_Swelling": {
+      "type": "Symptom",
+      "symptom": "Leg Swelling",
+      "cause": "Deep venous thrombosis",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Resolve_Chest_Pain"
+    },
+    "Resolve_Chest_Pain": {
+      "type": "Symptom",
+      "symptom": "Chest Pain",
+      "cause": "Pulmonary embolism",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Resolve_Dyspnea"
+    },
+    "Resolve_Dyspnea": {
+      "type": "Symptom",
+      "symptom": "Shortness of Breath",
+      "cause": "Pulmonary embolism",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Recurrence_Wait"
     },
     "Terminal": {
       "type": "Terminal"

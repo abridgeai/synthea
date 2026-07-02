@@ -194,6 +194,29 @@
       "type": "SetAttribute",
       "attribute": "bph_med_stopped",
       "value": false,
+      "direct_transition": "Control_Urinary_Frequency"
+    },
+    "Control_Urinary_Frequency": {
+      "type": "Symptom",
+      "symptom": "Urinary Frequency",
+      "cause": "Benign Prostatic Hyperplasia",
+      "remarks": [
+        "Alpha-blocker therapy relieves lower urinary tract symptoms. Drop to a low residual ",
+        "so a treated BPH patient does not chronically inflate the symptom total and generate ",
+        "spurious symptom-driven visits."
+      ],
+      "exact": {
+        "quantity": 5
+      },
+      "direct_transition": "Control_Nocturia"
+    },
+    "Control_Nocturia": {
+      "type": "Symptom",
+      "symptom": "Nocturia",
+      "cause": "Benign Prostatic Hyperplasia",
+      "exact": {
+        "quantity": 5
+      },
       "direct_transition": "End_Diagnosis_Encounter"
     },
     "End_Diagnosis_Encounter": {
@@ -429,6 +452,29 @@
           "unit": "days"
         },
         "refills": 11
+      },
+      "direct_transition": "Control_Urinary_Frequency_Urology"
+    },
+    "Control_Urinary_Frequency_Urology": {
+      "type": "Symptom",
+      "symptom": "Urinary Frequency",
+      "cause": "Benign Prostatic Hyperplasia",
+      "remarks": [
+        "Combination therapy (alpha-blocker + 5-ARI) brings the worsened symptoms of ",
+        "progressive BPH back under control. Residual left slightly higher than at initial ",
+        "diagnosis to reflect more advanced disease, but well below any visit-triggering total."
+      ],
+      "exact": {
+        "quantity": 5
+      },
+      "direct_transition": "Control_Nocturia_Urology"
+    },
+    "Control_Nocturia_Urology": {
+      "type": "Symptom",
+      "symptom": "Nocturia",
+      "cause": "Benign Prostatic Hyperplasia",
+      "exact": {
+        "quantity": 8
       },
       "direct_transition": "End_Urology_Encounter"
     },

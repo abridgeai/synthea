@@ -165,6 +165,38 @@
           "display": "carbidopa 25 MG / levodopa 100 MG Oral Tablet"
         }
       ],
+      "direct_transition": "Control_Tremor_Early"
+    },
+    "Control_Tremor_Early": {
+      "type": "Symptom",
+      "symptom": "Tremor",
+      "cause": "Parkinson's Disease",
+      "remarks": [
+        "Levodopa markedly improves early Parkinson's motor symptoms. Symptoms are knocked ",
+        "back to a low controlled residual so the four motor symptoms do not accumulate into ",
+        "a permanently visit-triggering total. Residuals rise modestly across stages."
+      ],
+      "exact": {
+        "quantity": 10
+      },
+      "direct_transition": "Control_Bradykinesia_Early"
+    },
+    "Control_Bradykinesia_Early": {
+      "type": "Symptom",
+      "symptom": "Bradykinesia",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 8
+      },
+      "direct_transition": "Control_Stiffness_Early"
+    },
+    "Control_Stiffness_Early": {
+      "type": "Symptom",
+      "symptom": "Stiffness",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 8
+      },
       "direct_transition": "End_Neurology_Encounter"
     },
     "End_Neurology_Encounter": {
@@ -344,6 +376,37 @@
           "display": "carbidopa 25 MG / levodopa 250 MG Oral Tablet"
         }
       ],
+      "direct_transition": "Control_Tremor_Mid"
+    },
+    "Control_Tremor_Mid": {
+      "type": "Symptom",
+      "symptom": "Tremor",
+      "cause": "Parkinson's Disease",
+      "remarks": [
+        "The mid-stage levodopa dose increase brings the worsened symptoms back under ",
+        "control, at a slightly higher residual than the early stage."
+      ],
+      "exact": {
+        "quantity": 15
+      },
+      "direct_transition": "Control_Bradykinesia_Mid"
+    },
+    "Control_Bradykinesia_Mid": {
+      "type": "Symptom",
+      "symptom": "Bradykinesia",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 12
+      },
+      "direct_transition": "Control_Stiffness_Mid"
+    },
+    "Control_Stiffness_Mid": {
+      "type": "Symptom",
+      "symptom": "Stiffness",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 10
+      },
       "direct_transition": "End_Mid_Encounter"
     },
     "End_Mid_Encounter": {
@@ -482,6 +545,48 @@
           "display": "Nursing care/supplementary surveillance (regime/therapy)"
         }
       ],
+      "direct_transition": "Control_Tremor_Advanced"
+    },
+    "Control_Tremor_Advanced": {
+      "type": "Symptom",
+      "symptom": "Tremor",
+      "cause": "Parkinson's Disease",
+      "remarks": [
+        "Advanced disease is only partially controlled by therapy and the assistance care ",
+        "plan. Residuals are the highest of any stage but are held well below the combined ",
+        "urgent-care threshold so the four motor symptoms do not generate a perpetual stream ",
+        "of symptom-driven visits."
+      ],
+      "exact": {
+        "quantity": 20
+      },
+      "direct_transition": "Control_Bradykinesia_Advanced"
+    },
+    "Control_Bradykinesia_Advanced": {
+      "type": "Symptom",
+      "symptom": "Bradykinesia",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 18
+      },
+      "direct_transition": "Control_Stiffness_Advanced"
+    },
+    "Control_Stiffness_Advanced": {
+      "type": "Symptom",
+      "symptom": "Stiffness",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 12
+      },
+      "direct_transition": "Control_Falls_Advanced"
+    },
+    "Control_Falls_Advanced": {
+      "type": "Symptom",
+      "symptom": "Falls",
+      "cause": "Parkinson's Disease",
+      "exact": {
+        "quantity": 10
+      },
       "direct_transition": "End_Advanced_Encounter"
     },
     "End_Advanced_Encounter": {

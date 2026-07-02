@@ -243,6 +243,22 @@
           "display": "Healthy diet (finding)"
         }
       ],
+      "direct_transition": "Control_Claudication"
+    },
+    "Control_Claudication": {
+      "type": "Symptom",
+      "symptom": "Cramping Leg Pain with Exertion",
+      "cause": "Peripheral arterial occlusive disease",
+      "remarks": [
+        "Cilostazol plus the supervised-exercise / risk-factor care plan improves walking ",
+        "distance and claudication. Drop to a low residual so a treated PAD patient does not ",
+        "chronically inflate the symptom total and generate spurious symptom-driven visits. ",
+        "Rest pain (critical limb ischemia) is handled separately and cleared after ",
+        "revascularization."
+      ],
+      "exact": {
+        "quantity": 5
+      },
       "direct_transition": "End_Diagnosis_Encounter"
     },
     "End_Diagnosis_Encounter": {

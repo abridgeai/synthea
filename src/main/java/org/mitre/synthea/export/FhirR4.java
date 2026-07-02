@@ -10,6 +10,7 @@ import com.google.gson.JsonObject;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -1240,10 +1241,18 @@ public class FhirR4 {
       .setCode("normal");
     claimResource.setPriority(priority);
 
-    // add item for encounter
-    claimResource.addItem(new ItemComponent(new PositiveIntType(1),
+    // add item for encounter with its cost
+    BigDecimal totalNet = BigDecimal.ZERO;
+    BigDecimal encounterCost = encounter.getCost();
+    ItemComponent encounterItem = new ItemComponent(new PositiveIntType(1),
           encounterResource.getTypeFirstRep())
-        .addEncounter(new Reference(encounterEntry.getFullUrl())));
+        .addEncounter(new Reference(encounterEntry.getFullUrl()));
+    Money encounterMoney = new Money();
+    encounterMoney.setCurrency("USD");
+    encounterMoney.setValue(encounterCost);
+    encounterItem.setNet(encounterMoney);
+    claimResource.addItem(encounterItem);
+    totalNet = totalNet.add(encounterCost);
 
     int itemSequence = 2;
     int conditionSequence = 1;
@@ -1265,6 +1274,7 @@ public class FhirR4 {
         moneyResource.setValue(item.getCost());
         claimItem.setNet(moneyResource);
         claimResource.addItem(claimItem);
+        totalNet = totalNet.add(item.getCost());
 
         if (item instanceof Procedure) {
           Type procedureReference = new Reference(item.fullUrl);
@@ -1311,7 +1321,7 @@ public class FhirR4 {
 
     Money moneyResource = new Money();
     moneyResource.setCurrency("USD");
-    moneyResource.setValue(encounter.claim.getTotalClaimCost());
+    moneyResource.setValue(totalNet);
     claimResource.setTotal(moneyResource);
 
     return newEntry(bundle, claimResource, encounter.claim.uuid.toString());
@@ -1873,10 +1883,10 @@ public class FhirR4 {
       String codeMappingUri = US_CORE_MAPPING.get(LOINC_URI, code.code);
       if (codeMappingUri != null) {
         meta.addProfile(codeMappingUri);
-        if (!codeMappingUri.contains("/us/core/") && observation.category.equals("vital-signs")) {
+        if (!codeMappingUri.contains("/us/core/") && "vital-signs".equals(observation.category)) {
           meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-vital-signs");
         }
-      } else if (observation.report != null && observation.category.equals("laboratory")) {
+      } else if (observation.report != null && "laboratory".equals(observation.category)) {
         meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab");
       }
 
@@ -2552,7 +2562,7 @@ public class FhirR4 {
     DiagnosticReport reportResource = new DiagnosticReport();
     boolean labsOnly = true;
     for (Observation observation : report.observations) {
-      labsOnly = labsOnly && observation.category.equalsIgnoreCase("laboratory");
+      labsOnly = labsOnly && "laboratory".equalsIgnoreCase(observation.category);
     }
     if (labsOnly && USE_US_CORE_IG) {
       Meta meta = new Meta();

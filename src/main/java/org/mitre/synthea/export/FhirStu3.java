@@ -760,9 +760,18 @@ public class FhirStu3 {
     claimResource.setPatient(new Reference(personEntry.getFullUrl()));
     claimResource.setOrganization(encounterResource.getServiceProvider());
 
-    // add item for encounter
-    claimResource.addItem(new ItemComponent(new PositiveIntType(1))
-        .addEncounter(new Reference(encounterEntry.getFullUrl())));
+    // add item for encounter with its cost
+    BigDecimal totalNet = BigDecimal.ZERO;
+    BigDecimal encounterCost = claim.mainEntry.entry.getCost();
+    ItemComponent encounterItem = new ItemComponent(new PositiveIntType(1))
+        .addEncounter(new Reference(encounterEntry.getFullUrl()));
+    Money encounterMoney = new Money();
+    encounterMoney.setCode("USD");
+    encounterMoney.setSystem("urn:iso:std:iso:4217");
+    encounterMoney.setValue(encounterCost);
+    encounterItem.setNet(encounterMoney);
+    claimResource.addItem(encounterItem);
+    totalNet = totalNet.add(encounterCost);
 
     int itemSequence = 2;
     int conditionSequence = 1;
@@ -788,6 +797,7 @@ public class FhirStu3 {
         moneyResource.setSystem("urn:iso:std:iso:4217");
         moneyResource.setValue(item.getCost());
         claimItem.setNet(moneyResource);
+        totalNet = totalNet.add(item.getCost());
 
         if (item instanceof HealthRecord.Procedure) {
           Type procedureReference = new Reference(item.fullUrl);
@@ -836,7 +846,7 @@ public class FhirStu3 {
     Money moneyResource = new Money();
     moneyResource.setCode("USD");
     moneyResource.setSystem("urn:iso:std:iso:4217");
-    moneyResource.setValue(claim.getTotalClaimCost());
+    moneyResource.setValue(totalNet);
     claimResource.setTotal(moneyResource);
 
     return newEntry(bundle, claimResource, claim.uuid.toString());

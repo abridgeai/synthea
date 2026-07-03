@@ -234,8 +234,7 @@
       "direct_transition": "Venous_US_Impression"
     },
     "Venous_US_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -243,7 +242,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Set_VTE_History"
     },
     "PE_Onset": {
@@ -350,8 +361,7 @@
       "direct_transition": "CTPA_Impression"
     },
     "CTPA_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -359,7 +369,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "PE_ED_End"
     },
     "PE_ED_End": {

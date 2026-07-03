@@ -247,8 +247,7 @@
       "direct_transition": "Duplex_Impression"
     },
     "Duplex_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -256,7 +255,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Cilostazol_Order"
     },
     "Cilostazol_Order": {
@@ -539,8 +550,7 @@
       "direct_transition": "CTA_Impression"
     },
     "CTA_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -548,7 +558,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "End_CLI_Encounter"
     },
     "End_CLI_Encounter": {

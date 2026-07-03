@@ -206,8 +206,7 @@
       "direct_transition": "Ankle_Xray_Impression"
     },
     "Ankle_Xray_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -215,7 +214,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Ankle_Analgesic"
     },
     "Ankle_Analgesic": {
@@ -392,8 +403,7 @@
       "direct_transition": "Wrist_Xray_Impression"
     },
     "Wrist_Xray_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -401,7 +411,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Wrist_Immobilization"
     },
     "Wrist_Immobilization": {
@@ -588,8 +610,7 @@
       "direct_transition": "Knee_Xray_Impression"
     },
     "Knee_Xray_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -597,7 +618,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Knee_MRI"
     },
     "Knee_MRI": {
@@ -645,8 +678,7 @@
       "direct_transition": "Knee_MRI_Impression"
     },
     "Knee_MRI_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -654,7 +686,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Knee_Analgesic"
     },
     "Knee_Analgesic": {
@@ -811,8 +855,7 @@
       "direct_transition": "Head_CT_Impression"
     },
     "Head_CT_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -820,7 +863,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Concussion_Encounter_End"
     },
     "Concussion_Encounter_End": {

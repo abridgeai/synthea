@@ -246,8 +246,7 @@
       "direct_transition": "Migraine_MRI_Impression"
     },
     "Migraine_MRI_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -255,7 +254,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Prescribe_Sumatriptan"
     },
     "Prescribe_Sumatriptan": {
@@ -562,8 +573,7 @@
       "direct_transition": "Migraine_CT_Impression"
     },
     "Migraine_CT_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -571,7 +581,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "End_ED_Visit"
     },
     "End_ED_Visit": {

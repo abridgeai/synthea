@@ -307,8 +307,7 @@
       "direct_transition": "CXR_Amb_Impression"
     },
     "CXR_Amb_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -316,7 +315,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Take_Temperature"
     },
     "Take_Temperature": {
@@ -515,8 +526,7 @@
       "direct_transition": "CXR_ED_Impression"
     },
     "CXR_ED_Impression": {
-      "type": "Observation",
-      "category": "imaging",
+      "type": "DiagnosticReport",
       "codes": [
         {
           "system": "LOINC",
@@ -524,7 +534,19 @@
           "display": "Diagnostic imaging study"
         }
       ],
-      "attribute": "imaging_impression",
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "ED_Oxygen_Saturation"
     },
     "ED_Oxygen_Saturation": {

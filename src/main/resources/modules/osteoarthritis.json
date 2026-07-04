@@ -493,8 +493,8 @@
       "reason": "osteoarthritis",
       "procedure_code": {
         "system": "SNOMED-CT",
-        "code": "168537006",
-        "display": "Plain radiography (procedure)"
+        "code": "783628002",
+        "display": "Plain X-ray of hip (procedure)"
       },
       "series": [
         {

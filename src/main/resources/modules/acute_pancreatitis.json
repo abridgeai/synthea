@@ -614,10 +614,20 @@
       "conditional_transition": [
         {
           "condition": {
-            "condition_type": "Attribute",
-            "attribute": "pancreatitis_etiology",
-            "operator": "==",
-            "value": "gallstone"
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "pancreatitis_etiology",
+                "operator": "==",
+                "value": "gallstone"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "cholecystectomy_performed",
+                "operator": "is nil"
+              }
+            ]
           },
           "transition": "Cholecystectomy_Mild"
         },
@@ -632,8 +642,8 @@
       "codes": [
         {
           "system": "SNOMED-CT",
-          "code": "387713003",
-          "display": "Laparoscopic cholecystectomy"
+          "code": "45595009",
+          "display": "Laparoscopic cholecystectomy (procedure)"
         }
       ],
       "duration": {
@@ -641,6 +651,12 @@
         "high": 90,
         "unit": "minutes"
       },
+      "direct_transition": "Set_Cholecystectomy_Done_Mild"
+    },
+    "Set_Cholecystectomy_Done_Mild": {
+      "type": "SetAttribute",
+      "attribute": "cholecystectomy_performed",
+      "value": true,
       "direct_transition": "EncounterEnd_ED_Mild"
     },
     "EncounterEnd_ED_Mild": {
@@ -667,7 +683,31 @@
           "display": "Encounter for problem (procedure)"
         }
       ],
-      "direct_transition": "Antibiotics_Med"
+      "direct_transition": "Antibiotics_Allergy_Check"
+    },
+    "Antibiotics_Allergy_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Piperacillin-tazobactam is a penicillin; route penicillin-allergic patients to a non-beta-lactam regimen."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "Antibiotics_Ciprofloxacin"
+        },
+        {
+          "transition": "Antibiotics_Med"
+        }
+      ]
     },
     "Antibiotics_Med": {
       "type": "MedicationOrder",
@@ -678,6 +718,32 @@
           "system": "RxNorm",
           "code": "1659149",
           "display": "piperacillin 4000 MG / tazobactam 500 MG Injection"
+        }
+      ],
+      "direct_transition": "Mortality_Check"
+    },
+    "Antibiotics_Ciprofloxacin": {
+      "type": "MedicationOrder",
+      "reason": "Onset_Condition",
+      "assign_to_attribute": "antibiotics_med",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "309309",
+          "display": "ciprofloxacin 500 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "Antibiotics_Metronidazole"
+    },
+    "Antibiotics_Metronidazole": {
+      "type": "MedicationOrder",
+      "reason": "Onset_Condition",
+      "assign_to_attribute": "antibiotics_med_2",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "311989",
+          "display": "metronidazole 500 MG Oral Tablet"
         }
       ],
       "direct_transition": "Mortality_Check"
@@ -710,10 +776,20 @@
       "conditional_transition": [
         {
           "condition": {
-            "condition_type": "Attribute",
-            "attribute": "pancreatitis_etiology",
-            "operator": "==",
-            "value": "gallstone"
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "pancreatitis_etiology",
+                "operator": "==",
+                "value": "gallstone"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "cholecystectomy_performed",
+                "operator": "is nil"
+              }
+            ]
           },
           "transition": "Cholecystectomy_ICU"
         },
@@ -728,8 +804,8 @@
       "codes": [
         {
           "system": "SNOMED-CT",
-          "code": "387713003",
-          "display": "Laparoscopic cholecystectomy"
+          "code": "45595009",
+          "display": "Laparoscopic cholecystectomy (procedure)"
         }
       ],
       "duration": {
@@ -737,6 +813,12 @@
         "high": 90,
         "unit": "minutes"
       },
+      "direct_transition": "Set_Cholecystectomy_Done_ICU"
+    },
+    "Set_Cholecystectomy_Done_ICU": {
+      "type": "SetAttribute",
+      "attribute": "cholecystectomy_performed",
+      "value": true,
       "direct_transition": "EncounterEnd_ICU"
     },
     "EncounterEnd_ICU": {
@@ -792,6 +874,11 @@
     "End_Antibiotics": {
       "type": "MedicationEnd",
       "referenced_by_attribute": "antibiotics_med",
+      "direct_transition": "End_Antibiotics_2"
+    },
+    "End_Antibiotics_2": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "antibiotics_med_2",
       "direct_transition": "Clear_Pain_Symptom"
     },
     "Clear_Pain_Symptom": {

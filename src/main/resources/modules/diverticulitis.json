@@ -324,6 +324,30 @@
     },
     "Med_Choice_Split": {
       "type": "Simple",
+      "remarks": [
+        "Amoxicillin-clavulanate is a penicillin; penicillin-allergic patients get ciprofloxacin plus metronidazole instead."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "Med_Cipro"
+        },
+        {
+          "transition": "Med_Choice_Random"
+        }
+      ]
+    },
+    "Med_Choice_Random": {
+      "type": "Simple",
       "distributed_transition": [
         {
           "distribution": 0.5,
@@ -473,7 +497,31 @@
         "high": 90,
         "unit": "minutes"
       },
-      "direct_transition": "Complicated_IV_Antibiotics"
+      "direct_transition": "Complicated_Antibiotic_Allergy_Check"
+    },
+    "Complicated_Antibiotic_Allergy_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Piperacillin-tazobactam is a penicillin; penicillin-allergic patients get ciprofloxacin plus metronidazole instead."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "Complicated_Cipro"
+        },
+        {
+          "transition": "Complicated_IV_Antibiotics"
+        }
+      ]
     },
     "Complicated_IV_Antibiotics": {
       "type": "MedicationOrder",
@@ -486,6 +534,32 @@
         }
       ],
       "assign_to_attribute": "dv_antibiotic_1",
+      "direct_transition": "Onset_Encounter_End_Complicated"
+    },
+    "Complicated_Cipro": {
+      "type": "MedicationOrder",
+      "reason": "Diverticulitis_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "309309",
+          "display": "ciprofloxacin 500 MG Oral Tablet"
+        }
+      ],
+      "assign_to_attribute": "dv_antibiotic_1",
+      "direct_transition": "Complicated_Metronidazole"
+    },
+    "Complicated_Metronidazole": {
+      "type": "MedicationOrder",
+      "reason": "Diverticulitis_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "311989",
+          "display": "metronidazole 500 MG Oral Tablet"
+        }
+      ],
+      "assign_to_attribute": "dv_antibiotic_2",
       "direct_transition": "Onset_Encounter_End_Complicated"
     },
     "Onset_Encounter_End_Complicated": {
@@ -524,8 +598,8 @@
       "codes": [
         {
           "system": "SNOMED-CT",
-          "code": "387713003",
-          "display": "CT-guided percutaneous drainage of abscess"
+          "code": "443016003",
+          "display": "Percutaneous drainage of abscess of peritoneum using computed tomography guidance (procedure)"
         }
       ],
       "duration": {
@@ -554,8 +628,8 @@
       "codes": [
         {
           "system": "SNOMED-CT",
-          "code": "387713003",
-          "display": "Sigmoid colectomy"
+          "code": "1390003",
+          "display": "Laparoscopic-assisted sigmoid colectomy (procedure)"
         }
       ],
       "duration": {
@@ -577,6 +651,11 @@
     "Complicated_MedEnd": {
       "type": "MedicationEnd",
       "referenced_by_attribute": "dv_antibiotic_1",
+      "direct_transition": "Complicated_MedEnd2"
+    },
+    "Complicated_MedEnd2": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "dv_antibiotic_2",
       "direct_transition": "Inpatient_Encounter_End"
     },
     "Inpatient_Encounter_End": {

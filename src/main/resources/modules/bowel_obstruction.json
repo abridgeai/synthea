@@ -396,14 +396,13 @@
       "type": "Procedure",
       "reason": "SBO_Onset",
       "remarks": [
-        "Exploratory laparotomy with lysis of adhesions. Generic surgical-procedure SNOMED code; ",
-        "detail carried in the state name."
+        "Exploratory laparotomy with lysis of adhesions for adhesive small bowel obstruction."
       ],
       "codes": [
         {
           "system": "SNOMED-CT",
-          "code": "387713003",
-          "display": "Surgical procedure (procedure)"
+          "code": "45602008",
+          "display": "Lysis of adhesions of peritoneum (procedure)"
         }
       ],
       "duration": {

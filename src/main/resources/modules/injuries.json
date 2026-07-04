@@ -780,6 +780,78 @@
           "display": "Emergency room admission (procedure)"
         }
       ],
+      "direct_transition": "Concussion_Head_CT",
+      "reason": "Concussion_Injury"
+    },
+    "Concussion_Head_CT": {
+      "type": "ImagingStudy",
+      "reason": "Concussion_Injury",
+      "remarks": [
+        "Non-contrast head CT to exclude intracranial hemorrhage per the Canadian CT Head Rule."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "69536005",
+            "display": "Head structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "Non-contrast CT of the head",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Concussion_Head_CT_Set_Impression"
+    },
+    "Concussion_Head_CT_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute intracranial hemorrhage or skull fracture.",
+      "direct_transition": "Concussion_Head_CT_Report"
+    },
+    "Concussion_Head_CT_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "Concussion_Severity_Split"
+    },
+    "Concussion_Severity_Split": {
+      "type": "Simple",
       "distributed_transition": [
         {
           "distribution": 0.75,
@@ -793,8 +865,7 @@
           "distribution": 0.05,
           "transition": "Severe_Concussion"
         }
-      ],
-      "reason": "Concussion_Injury"
+      ]
     },
     "Mild_Concussion": {
       "type": "ConditionOnset",
@@ -1190,6 +1261,36 @@
           ]
         }
       ],
+      "direct_transition": "Clavicle_X_Ray_Set_Impression"
+    },
+    "Clavicle_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Acute fracture of the mid-shaft clavicle; alignment and displacement as described. No pneumothorax.",
+      "direct_transition": "Clavicle_X_Ray_Report"
+    },
+    "Clavicle_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Broken_Bone_Surgery"
     },
     "Broken_Arm": {
@@ -1234,6 +1335,36 @@
               }
             }
           ]
+        }
+      ],
+      "direct_transition": "Arm_X_Ray_Set_Impression"
+    },
+    "Arm_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Acute fracture of the forearm with cortical disruption; no dislocation or intra-articular extension.",
+      "direct_transition": "Arm_X_Ray_Report"
+    },
+    "Arm_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
         }
       ],
       "direct_transition": "Broken_Bone_Immobilization"
@@ -1282,6 +1413,36 @@
           ]
         }
       ],
+      "direct_transition": "Wrist_X_Ray_Set_Impression"
+    },
+    "Wrist_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Distal radius fracture with dorsal angulation and associated subluxation at the radiocarpal joint.",
+      "direct_transition": "Wrist_X_Ray_Report"
+    },
+    "Wrist_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Broken_Bone_Immobilization"
     },
     "Broken_Ankle": {
@@ -1326,6 +1487,36 @@
               }
             }
           ]
+        }
+      ],
+      "direct_transition": "Ankle_X_Ray_Set_Impression"
+    },
+    "Ankle_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Acute fracture involving the distal fibula (lateral malleolus); ankle mortise maintained.",
+      "direct_transition": "Ankle_X_Ray_Report"
+    },
+    "Ankle_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
         }
       ],
       "distributed_transition": [
@@ -1383,6 +1574,36 @@
           ]
         }
       ],
+      "direct_transition": "Chest_X_Ray_Set_Impression"
+    },
+    "Chest_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Acute rib fracture; no pneumothorax, pleural effusion, or pulmonary contusion.",
+      "direct_transition": "Chest_X_Ray_Report"
+    },
+    "Chest_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "Broken_Bone_Immobilization"
     },
     "Broken_Hip": {
@@ -1427,6 +1648,36 @@
               }
             }
           ]
+        }
+      ],
+      "direct_transition": "Pelvic_X_Ray_Set_Impression"
+    },
+    "Pelvic_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Closed fracture of the proximal femur (hip); no dislocation. No other acute pelvic osseous injury.",
+      "direct_transition": "Pelvic_X_Ray_Report"
+    },
+    "Pelvic_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
         }
       ],
       "distributed_transition": [
@@ -2426,6 +2677,103 @@
               }
             }
           ]
+        }
+      ],
+      "direct_transition": "Knee_X_Ray_Set_Impression"
+    },
+    "Knee_X_Ray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute fracture or dislocation; findings consistent with internal derangement / soft-tissue (ligamentous) injury of the knee.",
+      "direct_transition": "Knee_X_Ray_Report"
+    },
+    "Knee_X_Ray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "Knee_MRI"
+    },
+    "Knee_MRI": {
+      "type": "ImagingStudy",
+      "reason": "Knee_Injury",
+      "remarks": [
+        "MRI confirms internal derangement (meniscal/ligamentous injury) when radiographs are negative."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "113091000",
+        "display": "Magnetic resonance imaging (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "72696002",
+            "display": "Knee region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "MR",
+            "display": "Magnetic Resonance"
+          },
+          "instances": [
+            {
+              "title": "Multi-sequence MRI of the knee",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.4",
+                "display": "MR Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Knee_MRI_Set_Impression"
+    },
+    "Knee_MRI_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Internal derangement of the knee with ligamentous / meniscal tear; no acute fracture.",
+      "direct_transition": "Knee_MRI_Report"
+    },
+    "Knee_MRI_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
         }
       ],
       "direct_transition": "Knee_Injury_Prescribe_Non_Opioid"

@@ -26,7 +26,8 @@
     "",
     "ATTRIBUTES: sets 'hyperlipidemia' = true at onset (for cross-module correlation), ",
     "'hyperlipidemia_condition' (the condition itself), 'statin_hyperlipidemia' (active statin), ",
-    "and 'hyperlipidemia_statin_stopped' (non-adherence flag).",
+    "'hyperlipidemia_statin_stopped' (non-adherence flag), and 'statin_dose' (current statin ",
+    "intensity, up-titrated 20 -> 40 -> 80 MG for patients above LDL goal).",
     "",
     "Condition, medication, lab, and care plan codes are reused from veteran_hyperlipidemia.json ",
     "and medications/statin.json."
@@ -417,9 +418,67 @@
     "End_Statin_For_Renewal": {
       "type": "MedicationEnd",
       "referenced_by_attribute": "statin_hyperlipidemia",
-      "direct_transition": "Statin_Renewal"
+      "direct_transition": "Statin_Intensification_Decision"
     },
-    "Statin_Renewal": {
+    "Statin_Intensification_Decision": {
+      "type": "Simple",
+      "remarks": [
+        "Guideline-directed up-titration: a fraction of adherent patients whose LDL remains above goal ",
+        "have their statin intensified toward high-intensity dosing (atorvastatin 20 -> 40 -> 80 MG) at ",
+        "annual follow-up, rather than staying on the starting dose for life. 'statin_dose' tracks the ",
+        "current intensity (unset is treated as the 20 MG starting dose)."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "statin_dose",
+            "operator": "==",
+            "value": 80
+          },
+          "transition": "Renew_Atorvastatin_80"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "statin_dose",
+            "operator": "==",
+            "value": 40
+          },
+          "transition": "Titrate_From_40"
+        },
+        {
+          "transition": "Titrate_From_20"
+        }
+      ]
+    },
+    "Titrate_From_20": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.3,
+          "transition": "Renew_Atorvastatin_40"
+        },
+        {
+          "distribution": 0.7,
+          "transition": "Renew_Atorvastatin_20"
+        }
+      ]
+    },
+    "Titrate_From_40": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.25,
+          "transition": "Renew_Atorvastatin_80"
+        },
+        {
+          "distribution": 0.75,
+          "transition": "Renew_Atorvastatin_40"
+        }
+      ]
+    },
+    "Renew_Atorvastatin_20": {
       "type": "MedicationOrder",
       "assign_to_attribute": "statin_hyperlipidemia",
       "reason": "hyperlipidemia",
@@ -443,6 +502,76 @@
         },
         "refills": 11
       },
+      "direct_transition": "Set_Statin_Dose_20"
+    },
+    "Set_Statin_Dose_20": {
+      "type": "SetAttribute",
+      "attribute": "statin_dose",
+      "value": 20,
+      "direct_transition": "End_Monitoring_Encounter"
+    },
+    "Renew_Atorvastatin_40": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "statin_hyperlipidemia",
+      "reason": "hyperlipidemia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "617311",
+          "display": "atorvastatin 40 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Set_Statin_Dose_40"
+    },
+    "Set_Statin_Dose_40": {
+      "type": "SetAttribute",
+      "attribute": "statin_dose",
+      "value": 40,
+      "direct_transition": "End_Monitoring_Encounter"
+    },
+    "Renew_Atorvastatin_80": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "statin_hyperlipidemia",
+      "reason": "hyperlipidemia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "617320",
+          "display": "atorvastatin 80 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 11
+      },
+      "direct_transition": "Set_Statin_Dose_80"
+    },
+    "Set_Statin_Dose_80": {
+      "type": "SetAttribute",
+      "attribute": "statin_dose",
+      "value": 80,
       "direct_transition": "End_Monitoring_Encounter"
     },
     "Discontinue_Statin": {
@@ -497,6 +626,15 @@
         },
         "refills": 11
       },
+      "direct_transition": "Reset_Statin_Dose_On_Restart"
+    },
+    "Reset_Statin_Dose_On_Restart": {
+      "type": "SetAttribute",
+      "attribute": "statin_dose",
+      "value": 20,
+      "remarks": [
+        "Restart at the standard starting dose; keeps statin_dose consistent with the ordered strength."
+      ],
       "direct_transition": "Clear_Statin_Stopped"
     },
     "Clear_Statin_Stopped": {

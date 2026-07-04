@@ -522,6 +522,39 @@
           "display": "Warfarin Sodium 5 MG Oral Tablet"
         }
       ],
+      "direct_transition": "Warfarin_Bridge_Enoxaparin"
+    },
+    "Warfarin_Bridge_Enoxaparin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "vte_bridge",
+      "reason": "vte_condition",
+      "remarks": [
+        "Warfarin has no immediate anticoagulant effect and is transiently procoagulant at initiation, ",
+        "so guidelines require a parenteral bridge (LMWH/heparin) overlapping warfarin for at least 5 days ",
+        "and until the INR is therapeutic (>=2). Enoxaparin RxNorm 854255 is reused from heart/covid modules."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 854255,
+          "display": "enoxaparin sodium 100 MG/ML Injectable Solution"
+        }
+      ],
+      "administration": true,
+      "direct_transition": "Warfarin_Bridge_Overlap"
+    },
+    "Warfarin_Bridge_Overlap": {
+      "type": "Delay",
+      "range": {
+        "low": 5,
+        "high": 7,
+        "unit": "days"
+      },
+      "direct_transition": "Warfarin_Bridge_End"
+    },
+    "Warfarin_Bridge_End": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "vte_bridge",
       "direct_transition": "Warfarin_INR_Delay"
     },
     "Warfarin_INR_Delay": {

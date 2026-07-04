@@ -1215,6 +1215,15 @@
     "Anesthesia": {
       "type": "CallSubmodule",
       "submodule": "surgery/general_anesthesia",
+      "direct_transition": "Set_Cholecystectomy_Performed"
+    },
+    "Set_Cholecystectomy_Performed": {
+      "type": "SetAttribute",
+      "attribute": "cholecystectomy_performed",
+      "value": true,
+      "remarks": [
+        "Shared marker so acute_pancreatitis does not perform a second cholecystectomy on a patient whose gallbladder is already removed."
+      ],
       "direct_transition": "Ready_for_Surgery"
     },
     "ECG": {

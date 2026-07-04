@@ -421,8 +421,8 @@
       "codes": [
         {
           "system": "SNOMED-CT",
-          "code": "387713003",
-          "display": "Ureteroscopy with laser lithotripsy"
+          "code": "176058000",
+          "display": "Ureteroscopic laser fragmentation of ureteric calculus (procedure)"
         }
       ],
       "duration": {

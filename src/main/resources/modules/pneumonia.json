@@ -42,7 +42,8 @@
       "remarks": [
         "Age- and comorbidity-dependent monthly probability of developing CAP.",
         "Attribute names verified against existing modules: smoker (lifecycle), diabetes (metabolic syndrome), ",
-        "copd_variant (copd.json), chf (congestive_heart_failure.json)."
+        "copd_variant (copd.json), chf (congestive_heart_failure.json), recent_influenza (influenza.json - ",
+        "transient elevation modeling post-influenza secondary bacterial pneumonia)."
       ],
       "complex_transition": [
         {
@@ -79,6 +80,12 @@
                     "condition_type": "Attribute",
                     "attribute": "chf",
                     "operator": "is not nil"
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "recent_influenza",
+                    "operator": "==",
+                    "value": true
                   }
                 ]
               }
@@ -138,6 +145,12 @@
                 "condition_type": "Attribute",
                 "attribute": "chf",
                 "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "recent_influenza",
+                "operator": "==",
+                "value": true
               }
             ]
           },
@@ -349,6 +362,30 @@
     },
     "Oral_Antibiotic_Choice": {
       "type": "Simple",
+      "remarks": [
+        "Amoxicillin-clavulanate is a penicillin; penicillin-allergic patients get a macrolide or tetracycline instead."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "Oral_Antibiotic_Choice_Allergic"
+        },
+        {
+          "transition": "Oral_Antibiotic_Choice_Random"
+        }
+      ]
+    },
+    "Oral_Antibiotic_Choice_Random": {
+      "type": "Simple",
       "distributed_transition": [
         {
           "distribution": 0.5,
@@ -360,6 +397,19 @@
         },
         {
           "distribution": 0.2,
+          "transition": "Prescribe_Doxycycline"
+        }
+      ]
+    },
+    "Oral_Antibiotic_Choice_Allergic": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.6,
+          "transition": "Prescribe_Azithromycin"
+        },
+        {
+          "distribution": 0.4,
           "transition": "Prescribe_Doxycycline"
         }
       ]
@@ -607,6 +657,30 @@
       ]
     },
     "ED_Oral_Antibiotic": {
+      "type": "Simple",
+      "remarks": [
+        "Amoxicillin-clavulanate is a penicillin; penicillin-allergic patients get doxycycline instead."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "ED_Doxycycline"
+        },
+        {
+          "transition": "ED_Amoxicillin_Clavulanate"
+        }
+      ]
+    },
+    "ED_Amoxicillin_Clavulanate": {
       "type": "MedicationOrder",
       "assign_to_attribute": "cap_antibiotic",
       "reason": "cap_pneumonia",
@@ -615,6 +689,19 @@
           "system": "RxNorm",
           "code": "562251",
           "display": "Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "End_ED_Encounter_Discharge"
+    },
+    "ED_Doxycycline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "cap_antibiotic",
+      "reason": "cap_pneumonia",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1649987",
+          "display": "doxycycline hyclate 100 MG"
         }
       ],
       "direct_transition": "End_ED_Encounter_Discharge"

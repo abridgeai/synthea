@@ -91,15 +91,6 @@
           "display": "Low back pain (finding)"
         }
       ],
-      "direct_transition": "Set_LBP_History"
-    },
-    "Set_LBP_History": {
-      "type": "SetAttribute",
-      "attribute": "low_back_pain_history",
-      "value": true,
-      "remarks": [
-        "Boolean flag so other modules can key off a history of low back pain."
-      ],
       "direct_transition": "Back_Pain_Symptom"
     },
     "Back_Pain_Symptom": {

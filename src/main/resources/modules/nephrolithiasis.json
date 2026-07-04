@@ -1,0 +1,530 @@
+{
+  "name": "Nephrolithiasis",
+  "remarks": [
+    "Lifetime prevalence of symptomatic kidney stones is approximately 11% in men and 7% in women in the United States (Scales CD et al., 'Prevalence of Kidney Stones in the United States', Eur Urol 2012;62(1):160-165).",
+    "About 50% of first-time stone formers experience a symptomatic recurrence within 10 years; recurrence risk continues for life but declines with each stone-free interval (Rule AD et al., 'Kidney Stones and the Risk for Chronic Kidney Disease', Kidney Int 2014).",
+    "Modeled here as a gender-weighted susceptibility split at module entry, an annual hazard of ~1.5%/year for a first stone beginning between ages 30-45 and ending at age 70, and a recurrence loop (Delay 1-5 years, ~30% recurrence per cycle) that stops at age 75."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "M"
+          },
+          "distributions": [
+            {
+              "distribution": 0.12,
+              "transition": "Delay_Until_Susceptible_Age"
+            },
+            {
+              "distribution": 0.88,
+              "transition": "Terminal"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "F"
+          },
+          "distributions": [
+            {
+              "distribution": 0.07,
+              "transition": "Delay_Until_Susceptible_Age"
+            },
+            {
+              "distribution": 0.93,
+              "transition": "Terminal"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 1.0,
+              "transition": "Terminal"
+            }
+          ]
+        }
+      ]
+    },
+    "Delay_Until_Susceptible_Age": {
+      "type": "Delay",
+      "range": {
+        "low": 30,
+        "high": 45,
+        "unit": "years"
+      },
+      "direct_transition": "Yearly_Hazard_Delay"
+    },
+    "Yearly_Hazard_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Check_Stone_Risk"
+    },
+    "Check_Stone_Risk": {
+      "type": "Simple",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 70,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.015,
+              "transition": "Stone_Onset"
+            },
+            {
+              "distribution": 0.985,
+              "transition": "Yearly_Hazard_Delay"
+            }
+          ]
+        }
+      ]
+    },
+    "Stone_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "ED_Encounter",
+      "assign_to_attribute": "kidney_stone_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "95570007",
+          "display": "Kidney stone (disorder)"
+        }
+      ],
+      "direct_transition": "Flank_Pain_Symptom"
+    },
+    "Flank_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Flank Pain",
+      "cause": "Nephrolithiasis",
+      "range": {
+        "low": 60,
+        "high": 95
+      },
+      "direct_transition": "Hematuria_Symptom"
+    },
+    "Hematuria_Symptom": {
+      "type": "Symptom",
+      "symptom": "Hematuria",
+      "cause": "Nephrolithiasis",
+      "range": {
+        "low": 20,
+        "high": 60
+      },
+      "direct_transition": "Nausea_Vomiting_Symptom"
+    },
+    "Nausea_Vomiting_Symptom": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Nephrolithiasis",
+      "range": {
+        "low": 30,
+        "high": 70
+      },
+      "direct_transition": "ED_Encounter"
+    },
+    "ED_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Pain_Score_Obs"
+    },
+    "Pain_Score_Obs": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "low": 6,
+        "high": 10,
+        "decimals": 0
+      },
+      "direct_transition": "Urinalysis_Report"
+    },
+    "Urinalysis_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24356-8",
+          "display": "Urinalysis complete panel"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "unit": "/[HPF]",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "13945-1",
+              "display": "Erythrocytes in urine sediment"
+            }
+          ],
+          "range": {
+            "low": 10,
+            "high": 50,
+            "decimals": 0
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2160-0",
+              "display": "Creatinine"
+            }
+          ],
+          "range": {
+            "low": 0.9,
+            "high": 1.6,
+            "decimals": 1
+          }
+        }
+      ],
+      "direct_transition": "CT_Imaging"
+    },
+    "CT_Imaging": {
+      "type": "ImagingStudy",
+      "reason": "Stone_Onset",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "Non-contrast CT of the abdomen and pelvis (stone protocol)",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Stone_Size_Pick"
+    },
+    "Stone_Size_Pick": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.7,
+          "transition": "Small_Stone_Set"
+        },
+        {
+          "distribution": 0.3,
+          "transition": "Large_Stone_Set"
+        }
+      ]
+    },
+    "Small_Stone_Set": {
+      "type": "SetAttribute",
+      "attribute": "stone_size",
+      "value": "small",
+      "direct_transition": "Small_Impression_Set"
+    },
+    "Small_Impression_Set": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Small (<5 mm) distal ureteric stone likely to pass spontaneously; no hydronephrosis.",
+      "direct_transition": "CT_Report"
+    },
+    "Large_Stone_Set": {
+      "type": "SetAttribute",
+      "attribute": "stone_size",
+      "value": "large",
+      "direct_transition": "Large_Impression_Set"
+    },
+    "Large_Impression_Set": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Larger (>=6 mm) obstructing ureteric stone with mild hydronephrosis.",
+      "direct_transition": "CT_Report"
+    },
+    "CT_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "Analgesia_Ibuprofen"
+    },
+    "Analgesia_Ibuprofen": {
+      "type": "MedicationOrder",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "206905",
+          "display": "Ibuprofen 400 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "Rescue_Morphine"
+    },
+    "Rescue_Morphine": {
+      "type": "MedicationOrder",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1728805",
+          "display": "2 ML morphine sulfate 1 MG/ML Injection"
+        }
+      ],
+      "direct_transition": "Antiemetic_Ondansetron"
+    },
+    "Antiemetic_Ondansetron": {
+      "type": "MedicationOrder",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1740467",
+          "display": "2 ML Ondansetron 2 MG/ML Injection"
+        }
+      ],
+      "direct_transition": "Tamsulosin_MET"
+    },
+    "Tamsulosin_MET": {
+      "type": "MedicationOrder",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "863669",
+          "display": "tamsulosin hydrochloride 0.4 MG Oral Capsule"
+        }
+      ],
+      "assign_to_attribute": "tamsulosin_medication",
+      "direct_transition": "ED_EncounterEnd"
+    },
+    "ED_EncounterEnd": {
+      "type": "EncounterEnd",
+      "discharge_disposition": {
+        "system": "NUBC",
+        "code": "01",
+        "display": "Discharged to home care or self care (routine discharge)"
+      },
+      "direct_transition": "Stone_Size_Branch"
+    },
+    "Stone_Size_Branch": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stone_size",
+            "operator": "==",
+            "value": "small"
+          },
+          "transition": "Conservative_Passage_Delay"
+        },
+        {
+          "transition": "Delay_To_Urology"
+        }
+      ]
+    },
+    "Conservative_Passage_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 3,
+        "unit": "weeks"
+      },
+      "direct_transition": "Stop_Tamsulosin"
+    },
+    "Delay_To_Urology": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 14,
+        "unit": "days"
+      },
+      "direct_transition": "Urology_Encounter"
+    },
+    "Urology_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Ureteroscopy_With_Laser_Lithotripsy"
+    },
+    "Ureteroscopy_With_Laser_Lithotripsy": {
+      "type": "Procedure",
+      "reason": "Stone_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "387713003",
+          "display": "Ureteroscopy with laser lithotripsy"
+        }
+      ],
+      "duration": {
+        "low": 45,
+        "high": 90,
+        "unit": "minutes"
+      },
+      "direct_transition": "Urology_EncounterEnd"
+    },
+    "Urology_EncounterEnd": {
+      "type": "EncounterEnd",
+      "discharge_disposition": {
+        "system": "NUBC",
+        "code": "01",
+        "display": "Discharged to home care or self care (routine discharge)"
+      },
+      "direct_transition": "Recovery_Delay"
+    },
+    "Recovery_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 10,
+        "unit": "days"
+      },
+      "direct_transition": "Stop_Tamsulosin"
+    },
+    "Stop_Tamsulosin": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "tamsulosin_medication",
+      "direct_transition": "Clear_Flank_Pain"
+    },
+    "Clear_Flank_Pain": {
+      "type": "Symptom",
+      "symptom": "Flank Pain",
+      "cause": "Nephrolithiasis",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Clear_Hematuria"
+    },
+    "Clear_Hematuria": {
+      "type": "Symptom",
+      "symptom": "Hematuria",
+      "cause": "Nephrolithiasis",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Clear_Nausea"
+    },
+    "Clear_Nausea": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Nephrolithiasis",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Stone_ConditionEnd"
+    },
+    "Stone_ConditionEnd": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "kidney_stone_condition",
+      "direct_transition": "Recurrence_Delay"
+    },
+    "Recurrence_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 5,
+        "unit": "years"
+      },
+      "direct_transition": "Recurrence_Check"
+    },
+    "Recurrence_Check": {
+      "type": "Simple",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 75,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.3,
+              "transition": "Stone_Onset"
+            },
+            {
+              "distribution": 0.7,
+              "transition": "Recurrence_Delay"
+            }
+          ]
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

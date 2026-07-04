@@ -1,0 +1,519 @@
+{
+  "name": "Bowel Obstruction",
+  "remarks": [
+    "This module models acute mechanical SMALL BOWEL OBSTRUCTION (SBO), the most common ",
+    "surgical small-bowel emergency. The dominant etiologies are post-operative adhesions and ",
+    "hernias. It exists to add a high-acuity abdominal presentation and its standard imaging ",
+    "workup to the synthetic population: an abdominal radiograph (obstructive series) followed ",
+    "by CT of the abdomen and pelvis, which is the modern test of choice for confirming the ",
+    "obstruction, locating the transition point, and detecting ischemia. Both studies are ",
+    "modeled as ImagingStudy states with a DiagnosticReport carrying a free-text impression, so ",
+    "they export as FHIR ImagingStudy + DiagnosticReport resources and surface in the LLM note ",
+    "context. Management follows the CT read: most partial/adhesive obstructions resolve with ",
+    "nasogastric decompression and IV fluids (bowel rest), while high-grade obstruction or ",
+    "suspected ischemia goes to laparotomy with lysis of adhesions. Adhesive SBO recurs, which ",
+    "the module captures with a recurrence loop.",
+    "Epidemiology: adhesions account for ~60-70% of SBO; SBO causes roughly 300,000 ",
+    "hospitalizations per year in the US. This model gives 12% of people lifetime susceptibility ",
+    "with a ~1.2% annual episode probability from mid-adulthood to age 85.",
+    "Sources: ",
+    "Miller G, et al. 'Etiology of small bowel obstruction.' Am J Surg. 2000;180(1):33-36. ",
+    "Maung AA, et al. 'Evaluation and management of small-bowel obstruction: EAST practice ",
+    "management guideline.' J Trauma Acute Care Surg. 2012;73(5 Suppl 4):S362-S369.",
+    "Codes for the abdominal body site, IV fluids, and the nasogastric tube device are reused ",
+    "from existing modules; generic radiography/CT/surgical SNOMED codes carry modality-specific ",
+    "detail in the instance titles."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "12% of people experience at least one mechanical bowel obstruction in their lifetime."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.12,
+          "transition": "Delay_Until_Risk"
+        },
+        {
+          "distribution": 0.88,
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Delay_Until_Risk": {
+      "type": "Delay",
+      "remarks": [
+        "Risk is concentrated in mid-adulthood and later, reflecting the accrual of prior ",
+        "abdominal surgery and hernias."
+      ],
+      "range": {
+        "low": 40,
+        "high": 55,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Risk"
+    },
+    "Annual_Risk": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Annual_Risk_Check"
+    },
+    "Annual_Risk_Check": {
+      "type": "Simple",
+      "remarks": [
+        "~1.2% annual episode probability through age 85."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 85,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.012,
+              "transition": "SBO_Onset"
+            },
+            {
+              "distribution": 0.988,
+              "transition": "Annual_Risk"
+            }
+          ]
+        }
+      ]
+    },
+    "SBO_Onset": {
+      "type": "ConditionOnset",
+      "target_encounter": "SBO_Encounter",
+      "assign_to_attribute": "bowel_obstruction_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "81060008",
+          "display": "Intestinal obstruction (disorder)"
+        }
+      ],
+      "direct_transition": "Pain_Symptom"
+    },
+    "Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Abdominal Pain",
+      "cause": "Bowel Obstruction",
+      "range": {
+        "low": 50,
+        "high": 90
+      },
+      "direct_transition": "Distension_Symptom"
+    },
+    "Distension_Symptom": {
+      "type": "Symptom",
+      "symptom": "Abdominal Distension",
+      "cause": "Bowel Obstruction",
+      "range": {
+        "low": 40,
+        "high": 80
+      },
+      "direct_transition": "Vomiting_Symptom"
+    },
+    "Vomiting_Symptom": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Bowel Obstruction",
+      "range": {
+        "low": 40,
+        "high": 90
+      },
+      "direct_transition": "Obstipation_Symptom"
+    },
+    "Obstipation_Symptom": {
+      "type": "Symptom",
+      "symptom": "Constipation",
+      "cause": "Bowel Obstruction",
+      "range": {
+        "low": 40,
+        "high": 90
+      },
+      "direct_transition": "SBO_Encounter"
+    },
+    "SBO_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "SBO_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "SBO_Pain_Observation"
+    },
+    "SBO_Pain_Observation": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 5,
+        "high": 9
+      },
+      "direct_transition": "Abdominal_Xray"
+    },
+    "Abdominal_Xray": {
+      "type": "ImagingStudy",
+      "reason": "SBO_Onset",
+      "remarks": [
+        "Obstructive series (supine and upright abdominal radiographs). Generic plain-radiography ",
+        "SNOMED code; modality is DX."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "168537006",
+        "display": "Plain radiography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "DX",
+            "display": "Digital Radiography"
+          },
+          "instances": [
+            {
+              "title": "Supine and upright abdominal radiographs (obstructive series)",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Xray_Set_Impression"
+    },
+    "Xray_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Multiple dilated small-bowel loops with air-fluid levels and a paucity of colonic gas, suggestive of small bowel obstruction.",
+      "direct_transition": "Xray_Report"
+    },
+    "Xray_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "Abdominal_CT"
+    },
+    "Abdominal_CT": {
+      "type": "ImagingStudy",
+      "reason": "SBO_Onset",
+      "remarks": [
+        "CT of the abdomen and pelvis with contrast confirms the obstruction, localizes the ",
+        "transition point, and evaluates for ischemia. Generic CT SNOMED code; modality is CT."
+      ],
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "CT of the abdomen and pelvis with contrast",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Severity_Selection"
+    },
+    "Severity_Selection": {
+      "type": "Simple",
+      "remarks": [
+        "~70% are partial/low-grade adhesive obstructions managed conservatively; ~30% are ",
+        "high-grade or show ischemia and require operative management."
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.7,
+          "transition": "Set_CT_Partial_Impression"
+        },
+        {
+          "distribution": 0.3,
+          "transition": "Set_CT_Complete_Impression"
+        }
+      ]
+    },
+    "Set_CT_Partial_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Dilated small-bowel loops with a transition point in the mid-abdomen and normally enhancing bowel wall, consistent with partial adhesive small bowel obstruction. No pneumatosis or free air.",
+      "direct_transition": "CT_Report"
+    },
+    "Set_CT_Complete_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "High-grade small bowel obstruction with a discrete transition point, mesenteric edema, and reduced bowel-wall enhancement, concerning for compromised bowel.",
+      "direct_transition": "CT_Report"
+    },
+    "CT_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "NG_Tube"
+    },
+    "NG_Tube": {
+      "type": "Device",
+      "code": {
+        "system": "SNOMED-CT",
+        "code": "17102003",
+        "display": "Nasogastric tube, device (physical object)"
+      },
+      "remarks": [
+        "Nasogastric decompression is standard initial management in both conservative and ",
+        "operative pathways."
+      ],
+      "direct_transition": "IV_Fluids"
+    },
+    "IV_Fluids": {
+      "type": "Procedure",
+      "reason": "SBO_Onset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "103744005",
+          "display": "Administration of intravenous fluids (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 30,
+        "high": 60,
+        "unit": "minutes"
+      },
+      "direct_transition": "Management_Router"
+    },
+    "Management_Router": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "PriorState",
+            "name": "Set_CT_Complete_Impression"
+          },
+          "transition": "Adhesiolysis"
+        },
+        {
+          "transition": "Conservative_Management"
+        }
+      ]
+    },
+    "Conservative_Management": {
+      "type": "Delay",
+      "remarks": [
+        "Bowel rest with nasogastric decompression and IV fluids; most partial obstructions ",
+        "resolve within a few days."
+      ],
+      "range": {
+        "low": 2,
+        "high": 5,
+        "unit": "days"
+      },
+      "direct_transition": "Remove_NG"
+    },
+    "Adhesiolysis": {
+      "type": "Procedure",
+      "reason": "SBO_Onset",
+      "remarks": [
+        "Exploratory laparotomy with lysis of adhesions. Generic surgical-procedure SNOMED code; ",
+        "detail carried in the state name."
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "387713003",
+          "display": "Surgical procedure (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 90,
+        "high": 180,
+        "unit": "minutes"
+      },
+      "direct_transition": "Post_Op_Recovery"
+    },
+    "Post_Op_Recovery": {
+      "type": "Delay",
+      "range": {
+        "low": 4,
+        "high": 8,
+        "unit": "days"
+      },
+      "direct_transition": "Remove_NG"
+    },
+    "Remove_NG": {
+      "type": "DeviceEnd",
+      "device": "NG_Tube",
+      "direct_transition": "End_SBO_Encounter"
+    },
+    "End_SBO_Encounter": {
+      "type": "EncounterEnd",
+      "discharge_disposition": {
+        "system": "NUBC",
+        "code": "01",
+        "display": "Discharged to home care or self care (routine discharge)"
+      },
+      "direct_transition": "Pain_Symptom_Ends"
+    },
+    "Pain_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Abdominal Pain",
+      "cause": "Bowel Obstruction",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Distension_Symptom_Ends"
+    },
+    "Distension_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Abdominal Distension",
+      "cause": "Bowel Obstruction",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Vomiting_Symptom_Ends"
+    },
+    "Vomiting_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Bowel Obstruction",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Obstipation_Symptom_Ends"
+    },
+    "Obstipation_Symptom_Ends": {
+      "type": "Symptom",
+      "symptom": "Constipation",
+      "cause": "Bowel Obstruction",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "SBO_Condition_End"
+    },
+    "SBO_Condition_End": {
+      "type": "ConditionEnd",
+      "condition_onset": "SBO_Onset",
+      "direct_transition": "Wait_For_Recurrence"
+    },
+    "Wait_For_Recurrence": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 5,
+        "unit": "years"
+      },
+      "remarks": [
+        "Adhesive obstruction recurs. New episodes stop after age 85."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 85,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.25,
+              "transition": "SBO_Onset"
+            },
+            {
+              "distribution": 0.75,
+              "transition": "Wait_For_Recurrence"
+            }
+          ]
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

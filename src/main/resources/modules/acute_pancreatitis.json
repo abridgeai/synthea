@@ -1,0 +1,891 @@
+{
+  "name": "Acute Pancreatitis",
+  "remarks": [
+    "Acute pancreatitis affects well under 1% of the population per year in the general population.",
+    "Gallstones and alcohol use are the two leading etiologies, together accounting for the large majority of cases, with a smaller share attributable to other causes (hypertriglyceridemia, medications, idiopathic, etc.).",
+    "Roughly 15-20% of cases are severe/necrotizing, and severe disease carries meaningful mortality risk during the index admission.",
+    "Sources: Tenner S, et al. American College of Gastroenterology Guideline: Management of Acute Pancreatitis. Am J Gastroenterol. 2013. Peery AF, et al. Burden of Gastrointestinal Disease in the United States. Gastroenterology. 2012."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "distributed_transition": [
+        {
+          "distribution": 0.10,
+          "transition": "Delay_To_Adulthood"
+        },
+        {
+          "distribution": 0.90,
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Terminal": {
+      "type": "Terminal"
+    },
+    "Delay_To_Adulthood": {
+      "type": "Delay",
+      "range": {
+        "low": 25,
+        "high": 50,
+        "unit": "years"
+      },
+      "direct_transition": "Hazard_Age_Check"
+    },
+    "Hazard_Age_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 90,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "transition": "Hazard_Roll"
+        }
+      ]
+    },
+    "Hazard_Roll": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.008,
+          "transition": "Determine_Etiology"
+        },
+        {
+          "distribution": 0.992,
+          "transition": "Hazard_Wait"
+        }
+      ]
+    },
+    "Hazard_Wait": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Hazard_Age_Check"
+    },
+    "Determine_Etiology": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.45,
+          "transition": "Etiology_Gallstone"
+        },
+        {
+          "distribution": 0.35,
+          "transition": "Etiology_Alcohol"
+        },
+        {
+          "distribution": 0.20,
+          "transition": "Etiology_Other"
+        }
+      ]
+    },
+    "Etiology_Gallstone": {
+      "type": "SetAttribute",
+      "attribute": "pancreatitis_etiology",
+      "value": "gallstone",
+      "direct_transition": "Onset_Symptoms"
+    },
+    "Etiology_Alcohol": {
+      "type": "SetAttribute",
+      "attribute": "pancreatitis_etiology",
+      "value": "alcohol",
+      "direct_transition": "Onset_Symptoms"
+    },
+    "Etiology_Other": {
+      "type": "SetAttribute",
+      "attribute": "pancreatitis_etiology",
+      "value": "other",
+      "direct_transition": "Onset_Symptoms"
+    },
+    "Onset_Symptoms": {
+      "type": "Symptom",
+      "symptom": "Abdominal Pain",
+      "cause": "Acute Pancreatitis",
+      "range": {
+        "low": 60,
+        "high": 95
+      },
+      "direct_transition": "Symptom_Nausea"
+    },
+    "Symptom_Nausea": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Acute Pancreatitis",
+      "range": {
+        "low": 40,
+        "high": 90
+      },
+      "direct_transition": "ED_Encounter"
+    },
+    "ED_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Onset_Condition"
+    },
+    "Onset_Condition": {
+      "type": "ConditionOnset",
+      "target_encounter": "ED_Encounter",
+      "assign_to_attribute": "pancreatitis_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "197456007",
+          "display": "Acute pancreatitis (disorder)"
+        }
+      ],
+      "direct_transition": "Pain_Score_Obs"
+    },
+    "Pain_Score_Obs": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "low": 6,
+        "high": 10,
+        "decimals": 0
+      },
+      "direct_transition": "Lab_Router"
+    },
+    "Lab_Router": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_etiology",
+            "operator": "==",
+            "value": "gallstone"
+          },
+          "transition": "Lab_Panel_Standard"
+        },
+        {
+          "transition": "Lab_Panel_With_Trig"
+        }
+      ]
+    },
+    "Lab_Panel_Standard": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "3040-3",
+          "display": "Lipase"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "3040-3",
+              "display": "Lipase"
+            }
+          ],
+          "range": {
+            "low": 300,
+            "high": 1500,
+            "decimals": 0
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1798-8",
+              "display": "Amylase"
+            }
+          ],
+          "range": {
+            "low": 200,
+            "high": 800,
+            "decimals": 0
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "10*3/uL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6690-2",
+              "display": "Leukocytes"
+            }
+          ],
+          "range": {
+            "low": 12,
+            "high": 20,
+            "decimals": 1
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "17861-6",
+              "display": "Calcium"
+            }
+          ],
+          "range": {
+            "low": 7.5,
+            "high": 9.0,
+            "decimals": 1
+          }
+        }
+      ],
+      "direct_transition": "RUQ_Ultrasound_Study"
+    },
+    "Lab_Panel_With_Trig": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "3040-3",
+          "display": "Lipase"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "3040-3",
+              "display": "Lipase"
+            }
+          ],
+          "range": {
+            "low": 300,
+            "high": 1500,
+            "decimals": 0
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1798-8",
+              "display": "Amylase"
+            }
+          ],
+          "range": {
+            "low": 200,
+            "high": 800,
+            "decimals": 0
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "10*3/uL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6690-2",
+              "display": "Leukocytes"
+            }
+          ],
+          "range": {
+            "low": 12,
+            "high": 20,
+            "decimals": 1
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "17861-6",
+              "display": "Calcium"
+            }
+          ],
+          "range": {
+            "low": 7.5,
+            "high": 9.0,
+            "decimals": 1
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2571-8",
+              "display": "Triglyceride"
+            }
+          ],
+          "range": {
+            "low": 150,
+            "high": 600,
+            "decimals": 0
+          }
+        }
+      ],
+      "direct_transition": "RUQ_Ultrasound_Study"
+    },
+    "RUQ_Ultrasound_Study": {
+      "type": "ImagingStudy",
+      "reason": "Onset_Condition",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "16310003",
+        "display": "Diagnostic ultrasonography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "US",
+            "display": "Ultrasound"
+          },
+          "instances": [
+            {
+              "title": "Right upper quadrant ultrasound",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.6.1",
+                "display": "Ultrasound Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "RUQ_Impression_Router"
+    },
+    "RUQ_Impression_Router": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_etiology",
+            "operator": "==",
+            "value": "gallstone"
+          },
+          "transition": "RUQ_Impression_Gallstone"
+        },
+        {
+          "transition": "RUQ_Impression_Normal"
+        }
+      ]
+    },
+    "RUQ_Impression_Gallstone": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Cholelithiasis with a dilated common bile duct",
+      "direct_transition": "RUQ_Report"
+    },
+    "RUQ_Impression_Normal": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No gallstones; normal biliary tree",
+      "direct_transition": "RUQ_Report"
+    },
+    "RUQ_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "CT_Abdomen_Study"
+    },
+    "CT_Abdomen_Study": {
+      "type": "ImagingStudy",
+      "reason": "Onset_Condition",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "CT of the abdomen and pelvis with contrast",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "CT_Severity_Picker"
+    },
+    "CT_Severity_Picker": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "Severity_Mild"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Severity_Severe"
+        }
+      ]
+    },
+    "Severity_Mild": {
+      "type": "SetAttribute",
+      "attribute": "pancreatitis_severity",
+      "value": "mild",
+      "direct_transition": "CT_Impression_Mild"
+    },
+    "CT_Impression_Mild": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Interstitial edematous pancreatitis without necrosis",
+      "direct_transition": "CT_Report"
+    },
+    "Severity_Severe": {
+      "type": "SetAttribute",
+      "attribute": "pancreatitis_severity",
+      "value": "severe",
+      "direct_transition": "CT_Impression_Severe"
+    },
+    "CT_Impression_Severe": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Necrotizing pancreatitis with peripancreatic collections",
+      "direct_transition": "CT_Report"
+    },
+    "CT_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "IV_Fluids"
+    },
+    "IV_Fluids": {
+      "type": "Procedure",
+      "reason": "Onset_Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "103744005",
+          "display": "Administration of intravenous fluids (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 6,
+        "high": 48,
+        "unit": "hours"
+      },
+      "direct_transition": "Morphine_Med"
+    },
+    "Morphine_Med": {
+      "type": "MedicationOrder",
+      "reason": "Onset_Condition",
+      "assign_to_attribute": "morphine_med",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1728805",
+          "display": "2 ML morphine sulfate 1 MG/ML Injection"
+        }
+      ],
+      "direct_transition": "Ondansetron_Med"
+    },
+    "Ondansetron_Med": {
+      "type": "MedicationOrder",
+      "reason": "Onset_Condition",
+      "assign_to_attribute": "ondansetron_med",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1740467",
+          "display": "2 ML Ondansetron 2 MG/ML Injection"
+        }
+      ],
+      "direct_transition": "NPO_CarePlan"
+    },
+    "NPO_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "Onset_Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "734163000",
+          "display": "Care plan"
+        }
+      ],
+      "direct_transition": "Severity_Router"
+    },
+    "Severity_Router": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_severity",
+            "operator": "==",
+            "value": "severe"
+          },
+          "transition": "EncounterEnd_ED_Severe"
+        },
+        {
+          "transition": "Gallstone_Check_Mild"
+        }
+      ]
+    },
+    "Gallstone_Check_Mild": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_etiology",
+            "operator": "==",
+            "value": "gallstone"
+          },
+          "transition": "Cholecystectomy_Mild"
+        },
+        {
+          "transition": "EncounterEnd_ED_Mild"
+        }
+      ]
+    },
+    "Cholecystectomy_Mild": {
+      "type": "Procedure",
+      "reason": "Onset_Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "387713003",
+          "display": "Laparoscopic cholecystectomy"
+        }
+      ],
+      "duration": {
+        "low": 40,
+        "high": 90,
+        "unit": "minutes"
+      },
+      "direct_transition": "EncounterEnd_ED_Mild"
+    },
+    "EncounterEnd_ED_Mild": {
+      "type": "EncounterEnd",
+      "discharge_disposition": {
+        "system": "NUBC",
+        "code": "01",
+        "display": "Discharged to home care or self care (routine discharge)"
+      },
+      "direct_transition": "Recovery_Delay"
+    },
+    "EncounterEnd_ED_Severe": {
+      "type": "EncounterEnd",
+      "direct_transition": "ICU_Encounter"
+    },
+    "ICU_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "Onset_Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Antibiotics_Med"
+    },
+    "Antibiotics_Med": {
+      "type": "MedicationOrder",
+      "reason": "Onset_Condition",
+      "assign_to_attribute": "antibiotics_med",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1659149",
+          "display": "piperacillin 4000 MG / tazobactam 500 MG Injection"
+        }
+      ],
+      "direct_transition": "Mortality_Check"
+    },
+    "Mortality_Check": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.08,
+          "transition": "Death_State"
+        },
+        {
+          "distribution": 0.92,
+          "transition": "ICU_Gallstone_Check"
+        }
+      ]
+    },
+    "Death_State": {
+      "type": "Death",
+      "referenced_by_attribute": "pancreatitis_condition",
+      "range": {
+        "low": 3,
+        "high": 21,
+        "unit": "days"
+      },
+      "direct_transition": "Terminal"
+    },
+    "ICU_Gallstone_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_etiology",
+            "operator": "==",
+            "value": "gallstone"
+          },
+          "transition": "Cholecystectomy_ICU"
+        },
+        {
+          "transition": "EncounterEnd_ICU"
+        }
+      ]
+    },
+    "Cholecystectomy_ICU": {
+      "type": "Procedure",
+      "reason": "Onset_Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "387713003",
+          "display": "Laparoscopic cholecystectomy"
+        }
+      ],
+      "duration": {
+        "low": 40,
+        "high": 90,
+        "unit": "minutes"
+      },
+      "direct_transition": "EncounterEnd_ICU"
+    },
+    "EncounterEnd_ICU": {
+      "type": "EncounterEnd",
+      "discharge_disposition": {
+        "system": "NUBC",
+        "code": "01",
+        "display": "Discharged to home care or self care (routine discharge)"
+      },
+      "direct_transition": "Recovery_Delay"
+    },
+    "Recovery_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 3,
+        "high": 10,
+        "unit": "days"
+      },
+      "direct_transition": "End_Morphine"
+    },
+    "End_Morphine": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "morphine_med",
+      "direct_transition": "End_Ondansetron"
+    },
+    "End_Ondansetron": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "ondansetron_med",
+      "direct_transition": "End_CarePlan"
+    },
+    "End_CarePlan": {
+      "type": "CarePlanEnd",
+      "careplan": "NPO_CarePlan",
+      "direct_transition": "Antibiotics_End_Router"
+    },
+    "Antibiotics_End_Router": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_severity",
+            "operator": "==",
+            "value": "severe"
+          },
+          "transition": "End_Antibiotics"
+        },
+        {
+          "transition": "Clear_Pain_Symptom"
+        }
+      ]
+    },
+    "End_Antibiotics": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "antibiotics_med",
+      "direct_transition": "Clear_Pain_Symptom"
+    },
+    "Clear_Pain_Symptom": {
+      "type": "Symptom",
+      "symptom": "Abdominal Pain",
+      "cause": "Acute Pancreatitis",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "Clear_Nausea_Symptom"
+    },
+    "Clear_Nausea_Symptom": {
+      "type": "Symptom",
+      "symptom": "Nausea/Vomiting",
+      "cause": "Acute Pancreatitis",
+      "exact": {
+        "quantity": 0
+      },
+      "direct_transition": "End_Condition"
+    },
+    "End_Condition": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "pancreatitis_condition",
+      "direct_transition": "Recurrence_Delay"
+    },
+    "Recurrence_Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 5,
+        "unit": "years"
+      },
+      "direct_transition": "Recurrence_Age_Check"
+    },
+    "Recurrence_Age_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 90,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "transition": "Recurrence_Router"
+        }
+      ]
+    },
+    "Recurrence_Router": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "pancreatitis_etiology",
+            "operator": "==",
+            "value": "alcohol"
+          },
+          "transition": "Recurrence_Chance_Alcohol"
+        },
+        {
+          "transition": "Recurrence_Chance_Other"
+        }
+      ]
+    },
+    "Recurrence_Chance_Alcohol": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.30,
+          "transition": "Onset_Symptoms"
+        },
+        {
+          "distribution": 0.70,
+          "transition": "Recurrence_Delay"
+        }
+      ]
+    },
+    "Recurrence_Chance_Other": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.10,
+          "transition": "Onset_Symptoms"
+        },
+        {
+          "distribution": 0.90,
+          "transition": "Recurrence_Delay"
+        }
+      ]
+    }
+  },
+  "gmf_version": 1
+}

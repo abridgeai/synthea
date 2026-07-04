@@ -421,12 +421,165 @@
           "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
         }
       ],
-      "direct_transition": "OA_CarePlan",
+      "direct_transition": "OA_Imaging_Selection",
       "range": {
         "decimals": 0,
         "low": 5,
         "high": 10
       }
+    },
+    "OA_Imaging_Selection": {
+      "type": "Simple",
+      "remarks": [
+        "Weight-bearing plain radiographs are obtained for large-joint (knee/hip) OA. Hand OA is ",
+        "usually a clinical diagnosis and is not routinely imaged here."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "PriorState",
+            "name": "OA_Of_The_Knee"
+          },
+          "transition": "Knee_OA_Xray"
+        },
+        {
+          "condition": {
+            "condition_type": "PriorState",
+            "name": "OA_Of_The_Hip"
+          },
+          "transition": "Hip_OA_Xray"
+        },
+        {
+          "transition": "OA_CarePlan"
+        }
+      ]
+    },
+    "Knee_OA_Xray": {
+      "type": "ImagingStudy",
+      "reason": "osteoarthritis",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "1290407002",
+        "display": "Plain X-ray of knee region (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "72696002",
+            "display": "Knee region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "DX",
+            "display": "Digital Radiography"
+          },
+          "instances": [
+            {
+              "title": "Weight-bearing AP and lateral radiographs of the knee",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "OA_Imaging_Impression_Picker"
+    },
+    "Hip_OA_Xray": {
+      "type": "ImagingStudy",
+      "reason": "osteoarthritis",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "783628002",
+        "display": "Plain X-ray of hip (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "29836001",
+            "display": "Hip region structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "DX",
+            "display": "Digital Radiography"
+          },
+          "instances": [
+            {
+              "title": "AP pelvis and lateral radiographs of the hip",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.1.1",
+                "display": "Digital X-Ray Image Storage – for Presentation"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "OA_Imaging_Impression_Picker"
+    },
+    "OA_Imaging_Impression_Picker": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "distribution": 0.35,
+          "transition": "OA_Set_Impression_Mild"
+        },
+        {
+          "distribution": 0.4,
+          "transition": "OA_Set_Impression_Moderate"
+        },
+        {
+          "distribution": 0.25,
+          "transition": "OA_Set_Impression_Severe"
+        }
+      ]
+    },
+    "OA_Set_Impression_Mild": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Mild joint-space narrowing with small marginal osteophytes; mild osteoarthritis.",
+      "direct_transition": "OA_Imaging_Report"
+    },
+    "OA_Set_Impression_Moderate": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Moderate joint-space narrowing with osteophytes and subchondral sclerosis; moderate osteoarthritis.",
+      "direct_transition": "OA_Imaging_Report"
+    },
+    "OA_Set_Impression_Severe": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Severe joint-space loss with large osteophytes and subchondral cysts; advanced osteoarthritis.",
+      "direct_transition": "OA_Imaging_Report"
+    },
+    "OA_Imaging_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "OA_CarePlan"
     },
     "Assign DME": {
       "type": "Simple",

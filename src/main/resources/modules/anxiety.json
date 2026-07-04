@@ -1,0 +1,773 @@
+{
+  "name": "Anxiety",
+  "remarks": [
+    "Generalized anxiety disorder (GAD) in the general population.",
+    "",
+    "Prevalence: lifetime prevalence of GAD is roughly 6-10% in US samples and about twice as ",
+    "high in women as in men, with onset spread from adolescence through middle age. Sources: ",
+    "Kessler RC et al. 'Lifetime prevalence and age-of-onset distributions of DSM-IV disorders ",
+    "in the National Comorbidity Survey Replication.' Arch Gen Psychiatry. 2005;62(6):593-602 ",
+    "(lifetime GAD 5.7%, median onset age 31). ",
+    "Ruscio AM et al. 'Cross-sectional Comparison of the Epidemiology of DSM-5 Generalized ",
+    "Anxiety Disorder Across the Globe.' JAMA Psychiatry. 2017;74(5):465-475 (US lifetime ",
+    "prevalence 7.8%; F:M roughly 2:1).",
+    "",
+    "Onset is modeled as an annual-probability loop from age 12 to age 55. Female annual ",
+    "hazard 0.0022 over ~43 at-risk years yields lifetime risk of about 9%; male annual hazard ",
+    "0.0011 yields about 4.6% (overall ~7%). A lifetime history of depression (the 'depression' ",
+    "attribute set by the depression module, or 'mdd' set by veteran_mdd) raises the hazard ",
+    "about 2.5x, reflecting the strong observed MDD-GAD comorbidity (Kessler RC et al., ",
+    "'The epidemiology of generalized anxiety disorder', Psychiatr Clin North Am. 2001).",
+    "",
+    "Diagnosis: GAD-7 assessment (LOINC 70274-6, reused from encounter/anxiety_screening) at an ",
+    "ambulatory symptom encounter; ConditionOnset uses SNOMED-CT 21897009 'Generalized anxiety ",
+    "disorder (disorder)' (no other module in this repo codes GAD).",
+    "",
+    "Treatment: mental health care plan with cognitive-behavioral therapy for everyone; 45% ",
+    "also receive first-line escitalopram, 25% buspirone, and 30% are managed with therapy ",
+    "alone. Long-term benzodiazepines are deliberately not modeled. About 30% of medicated ",
+    "patients fail the first agent and are switched to sertraline. During maintenance, 12% per ",
+    "quarter discontinue their medication without medical advice (non-adherence); most later ",
+    "resume care at a follow-up visit. Remission occurs with probability 0.25 per quarter on ",
+    "medication (0.30 per quarter in the therapy-only arm); medication is continued 3-6 months ",
+    "after remission before discontinuation.",
+    "",
+    "Relapse: GAD is chronic-relapsing; remitted patients face a 5%/year relapse hazard vs a ",
+    "5%/year chance of durable recovery (~50% eventually relapse; Yonkers KA et al., 'Phenomenology ",
+    "and course of generalised anxiety disorder', Br J Psychiatry. 1996). Relapse is detected ",
+    "via GAD-7 at a scheduled wellness encounter.",
+    "",
+    "Attributes: sets 'anxiety' = true at first onset and intentionally KEEPS it true after ",
+    "remission as a lifetime history marker for other modules (mirrors the depression module). ",
+    "The currently-active condition is tracked via 'anxiety_condition' (ended in remission). ",
+    "Also uses 'anxiety_careplan' and 'anxiety_med' internally; 'anxiety_med' is cleared (set ",
+    "to nil) whenever medication is stopped without an immediate replacement, so the shared ",
+    "EncounterEnd can route therapy-only patients correctly on repeat episodes.",
+    "",
+    "Codes reused from existing modules: LOINC 70274-6 (encounter/anxiety_screening), SNOMED ",
+    "encounter/care plan/activity codes (veteran_mdd, attention_deficit_disorder, gout), ",
+    "RxNorm 312938 sertraline (veteran_ptsd). Verified against RxNav: 349332 escitalopram ",
+    "10 MG Oral Tablet, 866083 buspirone hydrochloride 10 MG Oral Tablet."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 12,
+        "unit": "years"
+      },
+      "direct_transition": "Wait_For_Onset"
+    },
+    "Wait_For_Onset": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Onset_Check"
+    },
+    "Onset_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Annual onset hazard from age 12 to 55. Female 0.0022/yr (~9% lifetime), male 0.0011/yr ",
+        "(~4.6% lifetime); a history of depression ('depression' attribute from the depression ",
+        "module or 'mdd' from veteran_mdd) raises the hazard ~2.5x."
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 55,
+            "unit": "years"
+          },
+          "transition": "Terminal"
+        },
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Gender",
+                "gender": "F"
+              },
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "depression",
+                    "operator": "==",
+                    "value": true
+                  },
+                  {
+                    "condition_type": "Attribute",
+                    "attribute": "mdd",
+                    "operator": "is not nil"
+                  }
+                ]
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "transition": "GAD_Onset",
+              "distribution": 0.0055
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.9945
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "F"
+          },
+          "distributions": [
+            {
+              "transition": "GAD_Onset",
+              "distribution": 0.0022
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.9978
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "depression",
+                "operator": "==",
+                "value": true
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "mdd",
+                "operator": "is not nil"
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "transition": "GAD_Onset",
+              "distribution": 0.0028
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.9972
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "transition": "GAD_Onset",
+              "distribution": 0.0011
+            },
+            {
+              "transition": "Wait_For_Onset",
+              "distribution": 0.9989
+            }
+          ]
+        }
+      ]
+    },
+    "GAD_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "anxiety_condition",
+      "target_encounter": "GAD_Diagnosis_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "21897009",
+          "display": "Generalized anxiety disorder (disorder)"
+        }
+      ],
+      "direct_transition": "Set_Anxiety_Attribute"
+    },
+    "Set_Anxiety_Attribute": {
+      "type": "SetAttribute",
+      "attribute": "anxiety",
+      "value": true,
+      "remarks": [
+        "Lifetime history marker for cross-module correlation. Intentionally never cleared."
+      ],
+      "direct_transition": "Symptom_Delay"
+    },
+    "Symptom_Delay": {
+      "type": "Delay",
+      "remarks": [
+        "GAD symptoms are typically present for months before care is sought."
+      ],
+      "range": {
+        "low": 4,
+        "high": 12,
+        "unit": "weeks"
+      },
+      "direct_transition": "GAD_Diagnosis_Encounter"
+    },
+    "GAD_Diagnosis_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "anxiety_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185345009",
+          "display": "Encounter for symptom (procedure)"
+        }
+      ],
+      "direct_transition": "Initial_GAD7"
+    },
+    "Initial_GAD7": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "70274-6",
+          "display": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 10,
+        "high": 19
+      },
+      "remarks": [
+        "Moderate to severe score at diagnosis (GAD-7 >= 10)."
+      ],
+      "direct_transition": "Start_Anxiety_CarePlan"
+    },
+    "Start_Anxiety_CarePlan": {
+      "type": "CarePlanStart",
+      "assign_to_attribute": "anxiety_careplan",
+      "reason": "anxiety_condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "718347000",
+          "display": "Mental health care plan (record artifact)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "228557008",
+          "display": "Cognitive and behavioral therapy (regime/therapy)"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "385724002",
+          "display": "Coping support management (procedure)"
+        }
+      ],
+      "direct_transition": "Select_Treatment"
+    },
+    "Select_Treatment": {
+      "type": "Simple",
+      "remarks": [
+        "45% first-line SSRI (escitalopram), 25% buspirone, 30% psychotherapy alone. ",
+        "Long-term benzodiazepines are intentionally not modeled."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Escitalopram_For_GAD",
+          "distribution": 0.45
+        },
+        {
+          "transition": "Buspirone",
+          "distribution": 0.25
+        },
+        {
+          "transition": "End_Diagnosis_Encounter",
+          "distribution": 0.3
+        }
+      ]
+    },
+    "Escitalopram_For_GAD": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "anxiety_med",
+      "reason": "anxiety_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 349332,
+          "display": "escitalopram 10 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "Buspirone": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "anxiety_med",
+      "reason": "anxiety_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 866083,
+          "display": "buspirone hydrochloride 10 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 2,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "remarks": [
+        "Routes medicated patients to the pharmacotherapy follow-up loop and therapy-only ",
+        "patients to the psychotherapy course. 'anxiety_med' is nil for therapy-only patients ",
+        "because every medication-stopping path clears it."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "anxiety_med",
+            "operator": "is nil"
+          },
+          "transition": "Therapy_Course_Delay"
+        },
+        {
+          "transition": "Initial_Treatment_Delay"
+        }
+      ]
+    },
+    "Initial_Treatment_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 6,
+        "unit": "weeks"
+      },
+      "direct_transition": "Treatment_Followup_Encounter"
+    },
+    "Treatment_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "anxiety_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Followup_GAD7"
+    },
+    "Followup_GAD7": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "70274-6",
+          "display": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 3,
+        "high": 14
+      },
+      "direct_transition": "Assess_Response"
+    },
+    "Assess_Response": {
+      "type": "Simple",
+      "remarks": [
+        "About 30% fail the first agent and are switched to sertraline."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "End_Followup_Encounter",
+          "distribution": 0.7
+        },
+        {
+          "transition": "Stop_Ineffective_Med",
+          "distribution": 0.3
+        }
+      ]
+    },
+    "Stop_Ineffective_Med": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "anxiety_med",
+      "direct_transition": "Switch_To_Sertraline"
+    },
+    "Switch_To_Sertraline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "anxiety_med",
+      "reason": "anxiety_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 312938,
+          "display": "Sertraline 100 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Followup_Encounter"
+    },
+    "End_Followup_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Maintenance_Delay"
+    },
+    "Maintenance_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 3,
+        "unit": "months"
+      },
+      "direct_transition": "Maintenance_Check"
+    },
+    "Maintenance_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Each quarter on medication: 25% remit, 12% stop their medication without medical ",
+        "advice (non-adherence), the rest continue."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Maintenance_Delay",
+          "distribution": 0.63
+        },
+        {
+          "transition": "Remission_Followup_Encounter",
+          "distribution": 0.25
+        },
+        {
+          "transition": "Medication_Nonadherence",
+          "distribution": 0.12
+        }
+      ]
+    },
+    "Medication_Nonadherence": {
+      "type": "MedicationEnd",
+      "remarks": [
+        "Patient discontinues the medication without consulting their provider."
+      ],
+      "referenced_by_attribute": "anxiety_med",
+      "direct_transition": "Clear_Med_After_Nonadherence"
+    },
+    "Clear_Med_After_Nonadherence": {
+      "type": "SetAttribute",
+      "attribute": "anxiety_med",
+      "direct_transition": "Nonadherence_Gap"
+    },
+    "Nonadherence_Gap": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 4,
+        "unit": "months"
+      },
+      "direct_transition": "Nonadherence_Outcome"
+    },
+    "Nonadherence_Outcome": {
+      "type": "Simple",
+      "remarks": [
+        "Most non-adherent patients re-engage with care and resume medication; some remit ",
+        "without further pharmacotherapy."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Resume_Care_Encounter",
+          "distribution": 0.6
+        },
+        {
+          "transition": "Untreated_Remission",
+          "distribution": 0.4
+        }
+      ]
+    },
+    "Resume_Care_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "anxiety_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem (procedure)"
+        }
+      ],
+      "direct_transition": "Resume_Medication"
+    },
+    "Resume_Medication": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "anxiety_med",
+      "reason": "anxiety_condition",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 349332,
+          "display": "escitalopram 10 MG Oral Tablet"
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 1,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 30,
+          "unit": "days"
+        },
+        "refills": 12
+      },
+      "direct_transition": "End_Resume_Encounter"
+    },
+    "End_Resume_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Maintenance_Delay"
+    },
+    "Untreated_Remission": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "anxiety_condition",
+      "direct_transition": "End_CarePlan_Untreated"
+    },
+    "End_CarePlan_Untreated": {
+      "type": "CarePlanEnd",
+      "referenced_by_attribute": "anxiety_careplan",
+      "direct_transition": "Relapse_Watch"
+    },
+    "Remission_Followup_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "anxiety_condition",
+      "telemedicine_possibility": "possible",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "390906007",
+          "display": "Follow-up encounter (procedure)"
+        }
+      ],
+      "direct_transition": "Remission_GAD7"
+    },
+    "Remission_GAD7": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "70274-6",
+          "display": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 0,
+        "high": 4
+      },
+      "remarks": [
+        "GAD-7 < 5 indicates minimal symptoms / remission."
+      ],
+      "direct_transition": "GAD_Remission"
+    },
+    "GAD_Remission": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "anxiety_condition",
+      "remarks": [
+        "The active GAD condition ends. The 'anxiety' history attribute stays true."
+      ],
+      "direct_transition": "End_Remission_Encounter"
+    },
+    "End_Remission_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Continuation_Delay"
+    },
+    "Continuation_Delay": {
+      "type": "Delay",
+      "remarks": [
+        "Medication is continued 3-6 months after remission before discontinuation."
+      ],
+      "range": {
+        "low": 3,
+        "high": 6,
+        "unit": "months"
+      },
+      "direct_transition": "Stop_Med_After_Remission"
+    },
+    "Stop_Med_After_Remission": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "anxiety_med",
+      "direct_transition": "Clear_Med_After_Remission"
+    },
+    "Clear_Med_After_Remission": {
+      "type": "SetAttribute",
+      "attribute": "anxiety_med",
+      "direct_transition": "End_Anxiety_CarePlan"
+    },
+    "End_Anxiety_CarePlan": {
+      "type": "CarePlanEnd",
+      "referenced_by_attribute": "anxiety_careplan",
+      "direct_transition": "Relapse_Watch"
+    },
+    "Therapy_Course_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 3,
+        "unit": "months"
+      },
+      "direct_transition": "Therapy_Course_Check"
+    },
+    "Therapy_Course_Check": {
+      "type": "Simple",
+      "remarks": [
+        "Therapy-only arm: 30% chance of remission per quarter of CBT."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Therapy_Remission",
+          "distribution": 0.3
+        },
+        {
+          "transition": "Therapy_Course_Delay",
+          "distribution": 0.7
+        }
+      ]
+    },
+    "Therapy_Remission": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "anxiety_condition",
+      "direct_transition": "End_CarePlan_Therapy"
+    },
+    "End_CarePlan_Therapy": {
+      "type": "CarePlanEnd",
+      "referenced_by_attribute": "anxiety_careplan",
+      "direct_transition": "Relapse_Watch"
+    },
+    "Relapse_Watch": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Relapse_Check"
+    },
+    "Relapse_Check": {
+      "type": "Simple",
+      "remarks": [
+        "5%/yr relapse hazard vs 5%/yr durable recovery: ~50% of remitted patients eventually ",
+        "relapse, consistent with the chronic-relapsing course of GAD."
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Relapse_Wellness_Encounter",
+          "distribution": 0.05
+        },
+        {
+          "transition": "Terminal",
+          "distribution": 0.05
+        },
+        {
+          "transition": "Relapse_Watch",
+          "distribution": 0.9
+        }
+      ]
+    },
+    "Relapse_Wellness_Encounter": {
+      "type": "Encounter",
+      "wellness": true,
+      "remarks": [
+        "Relapses are picked up by GAD-7 screening at the next scheduled wellness visit."
+      ],
+      "direct_transition": "Relapse_GAD7"
+    },
+    "Relapse_GAD7": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "70274-6",
+          "display": "Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 10,
+        "high": 19
+      },
+      "direct_transition": "Recurrent_GAD_Onset"
+    },
+    "Recurrent_GAD_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "anxiety_condition",
+      "target_encounter": "Relapse_Wellness_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "21897009",
+          "display": "Generalized anxiety disorder (disorder)"
+        }
+      ],
+      "remarks": [
+        "Re-enters the shared care plan / treatment-selection flow. The shared EncounterEnd ",
+        "closes this wellness encounter and routes on 'anxiety_med' as usual."
+      ],
+      "direct_transition": "Start_Anxiety_CarePlan"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 1
+}

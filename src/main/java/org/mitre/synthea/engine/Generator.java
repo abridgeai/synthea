@@ -637,6 +637,7 @@ public class Generator {
     private boolean isDeadButAliveRequired;
     private boolean insufficientProviders;
     private boolean failedKeepModule;
+    private boolean keepModuleActive;
 
     private boolean meetsCriteria() {
       // if any of the flags are true, the patient does not meet criteria
@@ -650,7 +651,14 @@ public class Generator {
     private boolean exportAnyway() {
       // export anyway if rejectDeadButOverflow is the only one that is true
       // (ie. if all the other flags are false)
-      return !isAliveButDeadRequired
+      //
+      // Exception: when a keep module is active the caller wants a cohort of only the patients
+      // that pass the filter, so we must not export the overflow (dead) patients at all. Doing so
+      // would leave dead patients in the output alongside the live replacement generated for the
+      // same slot, and would waste downstream work (e.g. LLM note/transcript generation) on
+      // patients that were never asked for.
+      return !keepModuleActive
+        && !isAliveButDeadRequired
         && !isDeadButAliveRequired
         && !insufficientProviders
         && !failedKeepModule;
@@ -687,6 +695,7 @@ public class Generator {
     // if provider count less than provider min new patient is needed
 
     if (this.keepPatientsModule != null) {
+      check.keepModuleActive = true;
       // this one might be slow to process, so only do it if the other things are true
       if (!check.isAliveButDeadRequired && !check.isDeadButAliveRequired) {
         this.keepPatientsModule.process(person, finishTime, false);

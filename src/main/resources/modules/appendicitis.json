@@ -241,6 +241,146 @@
           "display": "Emergency room admission (procedure)"
         }
       ],
+      "direct_transition": "Appendicitis_Imaging_Selection"
+    },
+    "Appendicitis_Imaging_Selection": {
+      "type": "Simple",
+      "remarks": [
+        "CT of the abdomen and pelvis is first-line in adults. Children are imaged with graded ",
+        "compression ultrasound first to avoid ionizing radiation."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": "<",
+            "quantity": 18,
+            "unit": "years"
+          },
+          "transition": "Appendicitis_Ultrasound"
+        },
+        {
+          "transition": "Appendicitis_CT"
+        }
+      ]
+    },
+    "Appendicitis_Ultrasound": {
+      "type": "ImagingStudy",
+      "reason": "Appendicitis",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "16310003",
+        "display": "Diagnostic ultrasonography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "US",
+            "display": "Ultrasound"
+          },
+          "instances": [
+            {
+              "title": "Graded-compression ultrasound of the right lower quadrant",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.6.1",
+                "display": "Ultrasound Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Appendicitis_Impression_Selection"
+    },
+    "Appendicitis_CT": {
+      "type": "ImagingStudy",
+      "reason": "Appendicitis",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "113345001",
+            "display": "Abdominal structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "CT of the abdomen and pelvis with contrast",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Appendicitis_Impression_Selection"
+    },
+    "Appendicitis_Impression_Selection": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "PriorState",
+            "name": "Rupture"
+          },
+          "transition": "Set_Appendicitis_Perforated_Impression"
+        },
+        {
+          "transition": "Set_Appendicitis_Acute_Impression"
+        }
+      ]
+    },
+    "Set_Appendicitis_Acute_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Enlarged, non-compressible appendix with wall thickening and periappendiceal inflammatory fat stranding, consistent with acute appendicitis. No free air.",
+      "direct_transition": "Appendicitis_Imaging_Report"
+    },
+    "Set_Appendicitis_Perforated_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Appendiceal perforation with a periappendiceal fluid collection and adjacent inflammatory change, consistent with perforated appendicitis.",
+      "direct_transition": "Appendicitis_Imaging_Report"
+    },
+    "Appendicitis_Imaging_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
       "direct_transition": "History_of_Appendectomy"
     },
     "History_of_Appendectomy": {

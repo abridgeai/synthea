@@ -61,6 +61,202 @@
           "display": "Emergency room admission (procedure)"
         }
       ],
+      "direct_transition": "Head_CT"
+    },
+    "Head_CT": {
+      "type": "ImagingStudy",
+      "reason": "Stroke",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "303653007",
+        "display": "Computed tomography of head (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "69536005",
+            "display": "Head structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "Non-contrast CT of the head",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Head_CT_Set_Impression"
+    },
+    "Head_CT_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "No acute intracranial hemorrhage; hyperdense vessel sign, no established large territorial hypodensity.",
+      "direct_transition": "Head_CT_Report"
+    },
+    "Head_CT_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "CTA_Head_Neck"
+    },
+    "CTA_Head_Neck": {
+      "type": "ImagingStudy",
+      "reason": "Stroke",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "77477000",
+        "display": "Computed tomography (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "45048000",
+            "display": "Neck structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "instances": [
+            {
+              "title": "CT angiography of the head and neck",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "CTA_Set_Impression"
+    },
+    "CTA_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Large-vessel occlusion involving the M1 segment of the middle cerebral artery.",
+      "direct_transition": "CTA_Report"
+    },
+    "CTA_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "Brain_MRI"
+    },
+    "Brain_MRI": {
+      "type": "ImagingStudy",
+      "reason": "Stroke",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "113091000",
+        "display": "Magnetic resonance imaging (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": "12738006",
+            "display": "Brain structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "MR",
+            "display": "Magnetic Resonance"
+          },
+          "instances": [
+            {
+              "title": "MRI of the brain with diffusion-weighted imaging",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.4",
+                "display": "MR Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Brain_MRI_Set_Impression"
+    },
+    "Brain_MRI_Set_Impression": {
+      "type": "SetAttribute",
+      "attribute": "imaging_impression",
+      "value": "Acute infarct with restricted diffusion in the middle cerebral artery territory.",
+      "direct_transition": "Brain_MRI_Report"
+    },
+    "Brain_MRI_Report": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "display": "Diagnostic imaging study"
+        }
+      ],
+      "observations": [
+        {
+          "category": "imaging",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "18748-4",
+              "display": "Diagnostic imaging study"
+            }
+          ],
+          "attribute": "imaging_impression"
+        }
+      ],
+      "direct_transition": "Treatment_Decision"
+    },
+    "Treatment_Decision": {
+      "type": "Simple",
       "conditional_transition": [
         {
           "transition": "Clopidogrel",

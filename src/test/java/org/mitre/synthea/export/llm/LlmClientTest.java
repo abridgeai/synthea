@@ -89,6 +89,21 @@ public class LlmClientTest {
   }
 
   @Test
+  public void cacheWriteLeavesNoTempFiles() throws Exception {
+    Config.set("exporter.llm.cache", "true");
+    server.enqueue(new MockResponse().setBody(SUCCESS_BODY));
+
+    LlmClient client = new LlmClient();
+    assertEquals("Generated note.", client.complete("sys", "user"));
+
+    // The atomic write-then-rename must leave exactly the final .txt entry and no .tmp leftovers.
+    long txt = Files.list(cacheDir).filter(p -> p.toString().endsWith(".txt")).count();
+    long tmp = Files.list(cacheDir).filter(p -> p.toString().endsWith(".tmp")).count();
+    assertEquals(1, txt);
+    assertEquals(0, tmp);
+  }
+
+  @Test
   public void notConfiguredWithoutKey() {
     Config.set("exporter.llm.api_key", "");
     // Env var may still provide a key; only assert behavior when none is present.

@@ -5,7 +5,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mitre.synthea.export.Exporter;
@@ -83,15 +87,59 @@ public abstract class LlmEncounterExporter implements PatientExporter {
     }
 
     List<Encounter> encounters = person.record.encounters;
-    for (int i = 0; i < encounters.size(); i++) {
-      Encounter encounter = encounters.get(i);
-      String structured = EncounterDeltaContext.build(person, encounter);
-      if (structured == null || structured.isBlank()) {
-        continue;
+
+    // Each encounter's note/transcript is independent: EncounterDeltaContext.build reconstructs
+    // the state entering an encounter from the (read-only during export) person.record, never from
+    // another encounter's output, and each writes a distinct file. So the encounters of one patient
+    // can be generated concurrently. When parallelism is enabled we fan them out to the shared
+    // LlmExecutor pool, which bounds total in-flight requests across all patients and both
+    // exporters; when disabled (concurrency == 1) we generate serially, as before.
+    if (!LlmExecutor.isParallel()) {
+      for (int i = 0; i < encounters.size(); i++) {
+        generateForEncounter(client, person, encounters.get(i), i);
       }
-      String generated = client.complete(systemPrompt(), structured);
-      if (generated != null) {
-        write(person, i, generated);
+      return;
+    }
+
+    ExecutorService pool = LlmExecutor.pool();
+    List<Future<?>> futures = new ArrayList<>(encounters.size());
+    for (int i = 0; i < encounters.size(); i++) {
+      final int index = i;
+      final Encounter encounter = encounters.get(i);
+      futures.add(pool.submit(() -> generateForEncounter(client, person, encounter, index)));
+    }
+    awaitAll(futures);
+  }
+
+  /**
+   * Build the structured input for one encounter and, if non-empty, generate and write its output.
+   * Runs either on the calling (patient) thread or on an {@link LlmExecutor} worker.
+   */
+  private void generateForEncounter(LlmClient client, Person person, Encounter encounter,
+      int encounterIndex) {
+    String structured = EncounterDeltaContext.build(person, encounter);
+    if (structured == null || structured.isBlank()) {
+      return;
+    }
+    String generated = client.complete(systemPrompt(), structured);
+    if (generated != null) {
+      write(person, encounterIndex, generated);
+    }
+  }
+
+  /**
+   * Wait for all submitted encounter tasks to finish. A single encounter's failure is logged and
+   * does not abort the rest of the patient's export.
+   */
+  private static void awaitAll(List<Future<?>> futures) {
+    for (Future<?> future : futures) {
+      try {
+        future.get();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      } catch (ExecutionException e) {
+        System.err.println("LLM export: encounter task failed: " + e.getCause());
       }
     }
   }

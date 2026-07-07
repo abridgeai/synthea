@@ -24,6 +24,17 @@ At export time the flow is:
    record to the configured history window (and after-death filtering). **This filtered
    record is shared by all exporters**, so FHIR, CSV, notes, and custom `PatientExporter`s
    all see the identical, identically-ordered encounter list.
+
+   **`years_of_history` is NOT a clean N-year cut** (`Exporter.filterForExport`, `Exporter.java`
+   ~716-768). It keeps the last N years **plus every older encounter that introduced a
+   still-active condition, allergy, medication, or careplan** (`entryIsActive`: `stop==0 ||
+   stop>cutoff` → the encounter stays "non-empty" and survives). Since social-history findings
+   (e.g. *"Received higher education (finding)"*, employment status) **never get a stop date**,
+   they pin otherwise-trivial old encounters forever. Net effect for elderly/multimorbid
+   patients: the exported record — and thus the LLM notes/transcripts — spans **most of the
+   patient's life, not just the last 10 years** (empirically, notes for 65–75yo patients ranged
+   age 0–79; ~78% fell in the last ~15 years). Lowering `years_of_history` shrinks the recent
+   window but does **not** remove these pinned older encounters. This is expected, not a bug.
 2. Built-in exporters run (FHIR/CSV/JSON/text/notes), then any `PatientExporter`s
    (`exporter.enable_custom_exporters=true`), then `PostCompletionExporter`s once at the end.
 
@@ -114,14 +125,41 @@ record.
 | `exporter.llm.base_url` | API base; **region-locked keys need `https://us.api.openai.com/v1`** |
 | `exporter.llm.model` | model id |
 | `exporter.llm.cache` / `exporter.llm.cache_dir` | response cache (default `./output/llm_cache`) |
+| `exporter.llm.max_concurrent_requests` | global cap on in-flight LLM requests across all patients + both exporters (default 50; `1` = serial). LLM calls are I/O-bound, so this is decoupled from `generate.thread_pool_size` — see the parallelism note below |
 
 There is **no sampling cap**: when enabled, a note/transcript is generated for **every encounter
-of every exported patient**, so total LLM volume = patients (`-p`) × their encounters × 2. Control
-cost by the number of patients generated. The FHIR injector therefore replaces the template note
-in **every** encounter's `DiagnosticReport`/`DocumentReference`.
+of the filtered record**, for every exported patient. Because the LLM exporters run on the *same*
+filtered record as FHIR/CSV, generation is strictly **1:1 with exported encounters** — nothing is
+generated that isn't exported (verified: encounters == notes == transcripts, and each becomes a
+`DocumentReference`). But per the `filterForExport` note above, "encounters of the filtered record"
+means **~full-life for complex patients**, not a 10-year window — so budget total LLM volume ≈
+patients (`-p`) × (their lifetime encounters that seeded still-active problems/meds + last-N-years
+encounters) × 2, **not** `-p` × 10-years-of-encounters × 2. Empirically ~120 calls/patient for
+elderly multimorbid patients. Control cost primarily via the number of patients generated.
+
+**Parallelism:** encounters within a patient are generated concurrently via a shared bounded pool
+(`LlmExecutor`) sized by `exporter.llm.max_concurrent_requests`; patients already run in parallel
+on the generator's pool. The requests multiplex over one HTTP/2 connection, so raising concurrency
+costs streams, not TCP connections. At 50 concurrent (~2.5k tokens/call, ~10s latency) you use ~1%
+of a 30k-RPM / 180M-TPM OpenAI tier — the rate limit is not the binding constraint at any sane value.
 
 **Cost & cache notes:** the cache makes re-runs with identical prompts free. Changing the model
 **or the prompt** invalidates the cache → fresh API calls. Same seed + same data = cache hits.
+
+## Viewing a patient: HTML report generator
+
+`tools/build_patient_report.py` renders a single generated patient into a physician-friendly,
+self-contained HTML chart: patient banner, active problem list / meds / allergies, **collapsible
+encounters** (each with vitals, diagnoses/procedures/orders, the LLM clinical note rendered from
+markdown, and the encounter transcript), then Labs and Imaging sections.
+
+```
+python3 tools/build_patient_report.py [BUNDLE.json] [OUT.html]
+```
+With no args it picks the single patient bundle in `output/fhir/` (ignoring the hospital/
+practitioner `*Information*` files) and writes `output/patient_report.html`. It reads the LLM
+notes/transcripts **from the bundle**, so generate with `exporter.fhir.llm.inject=true` first (else
+notes/transcripts are absent). Pure stdlib; no external deps.
 
 ## Build / run environment (this machine)
 

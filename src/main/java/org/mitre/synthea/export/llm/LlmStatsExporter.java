@@ -15,6 +15,9 @@ public class LlmStatsExporter implements PostCompletionExporter {
   @Override
   public void export(Generator generator, ExporterRuntimeOptions options) {
     long apiCalls = LlmClient.getApiCallCount();
+    // All patient exports have finished by the post-completion phase, so no tasks remain in flight;
+    // release the shared pool so a subsequent run in the same JVM starts clean.
+    LlmExecutor.shutdown();
     if (apiCalls == 0) {
       return;
     }

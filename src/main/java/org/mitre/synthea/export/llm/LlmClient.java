@@ -6,9 +6,11 @@ import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -241,7 +243,20 @@ public class LlmClient {
     }
     try {
       Files.createDirectories(cacheDir);
-      Files.writeString(cacheDir.resolve(key + ".txt"), value, StandardCharsets.UTF_8);
+      // Write to a unique temp file then atomically move it into place, so a concurrent reader
+      // (many LLM workers share this cache dir) never sees a half-written entry. Two workers
+      // racing on the same key just overwrite each other with identical content.
+      Path target = cacheDir.resolve(key + ".txt");
+      Path tmp = cacheDir.resolve(key + "." + Thread.currentThread().getId() + ".tmp");
+      Files.writeString(tmp, value, StandardCharsets.UTF_8);
+      try {
+        Files.move(tmp, target,
+            StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      } catch (AtomicMoveNotSupportedException e) {
+        Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+      } finally {
+        Files.deleteIfExists(tmp);
+      }
     } catch (IOException e) {
       // Caching is best-effort; a write failure should not stop generation.
     }

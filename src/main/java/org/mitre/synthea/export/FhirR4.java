@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -420,6 +421,12 @@ public class FhirR4 {
       if (shouldExport(Condition.class)) {
         for (HealthRecord.Entry condition : encounter.conditions) {
           condition(person, personEntry, bundle, encounterEntry, condition);
+          // In addition to the point-in-time encounter-diagnosis above, emit a maintained
+          // problem-list-item so downstream US Core "Problems" views are populated. This is a
+          // separate resource; the encounter-diagnosis resource is left unchanged.
+          if (USE_US_CORE_IG) {
+            conditionProblemListItem(person, personEntry, bundle, encounterEntry, condition);
+          }
         }
       }
 
@@ -1707,6 +1714,78 @@ public class FhirR4 {
         newEntry(bundle, conditionResource, condition.uuid.toString());
     condition.fullUrl = conditionEntry.getFullUrl();
     return conditionEntry;
+  }
+
+  /**
+   * Map the Condition into a US Core problem-list-item Condition resource, and add it to the given
+   * Bundle. This is emitted in addition to the encounter-diagnosis resource produced by
+   * {@link #condition}, so that a maintained problem list is available to downstream consumers.
+   *
+   * <p>The chronicity signal is the condition's {@code stop} time: a condition with no stop is
+   * still active/chronic and is reported with {@code clinicalStatus = active}; a condition with a
+   * stop is a resolved historical problem, reported with {@code clinicalStatus = resolved} and an
+   * {@code abatementDateTime}. Only called when the US Core IG is enabled.
+   *
+   * @param rand           Source of randomness (for code translation)
+   * @param personEntry    The Entry for the Person
+   * @param bundle         The Bundle to add to
+   * @param encounterEntry The current Encounter entry
+   * @param condition      The Condition
+   * @return The added Entry
+   */
+  private static BundleEntryComponent conditionProblemListItem(
+          RandomNumberGenerator rand,
+          BundleEntryComponent personEntry, Bundle bundle, BundleEntryComponent encounterEntry,
+          HealthRecord.Entry condition) {
+    Condition conditionResource = new Condition();
+
+    Meta meta = new Meta();
+    if (useUSCore5() || useUSCore6() || useUSCore7()) {
+      meta.addProfile(
+          "http://hl7.org/fhir/us/core/StructureDefinition/"
+          + "us-core-condition-problems-health-concerns");
+    } else {
+      meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition");
+    }
+    conditionResource.setMeta(meta);
+    conditionResource.addCategory(new CodeableConcept().addCoding(new Coding(
+        "http://terminology.hl7.org/CodeSystem/condition-category", "problem-list-item",
+        "Problem List Item")));
+
+    conditionResource.setSubject(new Reference(personEntry.getFullUrl()));
+    conditionResource.setEncounter(new Reference(encounterEntry.getFullUrl()));
+
+    Code code = condition.codes.get(0);
+    CodeableConcept concept = mapCodeToCodeableConcept(code, SNOMED_URI);
+    addTranslation("ICD10-CM", code, concept, rand);
+    conditionResource.setCode(concept);
+
+    CodeableConcept verification = new CodeableConcept();
+    verification.getCodingFirstRep()
+      .setCode("confirmed")
+      .setSystem("http://terminology.hl7.org/CodeSystem/condition-ver-status");
+    conditionResource.setVerificationStatus(verification);
+
+    CodeableConcept status = new CodeableConcept();
+    status.getCodingFirstRep()
+      .setCode("active")
+      .setSystem("http://terminology.hl7.org/CodeSystem/condition-clinical");
+    conditionResource.setClinicalStatus(status);
+
+    conditionResource.setOnset(convertFhirDateTime(condition.start, true));
+    conditionResource.setRecordedDate(new Date(condition.start));
+
+    if (condition.stop != 0) {
+      conditionResource.setAbatement(convertFhirDateTime(condition.stop, true));
+      status.getCodingFirstRep().setCode("resolved");
+    }
+
+    // Derive a stable, distinct id from the condition's uuid so the problem-list-item resource is
+    // reproducible across runs and never collides with its encounter-diagnosis counterpart.
+    UUID problemUuid = UUID.nameUUIDFromBytes(
+        (condition.uuid.toString() + "-problem-list-item").getBytes(StandardCharsets.UTF_8));
+
+    return newEntry(bundle, conditionResource, problemUuid.toString());
   }
 
   /**

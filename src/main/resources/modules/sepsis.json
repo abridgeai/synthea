@@ -196,6 +196,27 @@
       ],
       "direct_transition": "Administer_Broad_Spectrum_Abx"
     },
+    "Resolve_Acute_Sepsis": {
+      "type": "ConditionEnd",
+      "remarks": [
+        "Survivors clear the acute septic episode before discharge. Without this the Sepsis ",
+        "condition (and any Septic shock / ARDS complications) would stay stop==0 and be pinned ",
+        "as an active problem for life, appearing as a current, untreated diagnosis in ",
+        "short-history exports. ConditionEnd is a no-op for complications that never onset."
+      ],
+      "condition_onset": "Sepsis",
+      "direct_transition": "Resolve_Septic_Shock"
+    },
+    "Resolve_Septic_Shock": {
+      "type": "ConditionEnd",
+      "condition_onset": "Septic_Shock",
+      "direct_transition": "Resolve_ARDS"
+    },
+    "Resolve_ARDS": {
+      "type": "ConditionEnd",
+      "referenced_by_attribute": "ARDS",
+      "direct_transition": "Discharge_to_Home"
+    },
     "Discharge_to_Home": {
       "type": "EncounterEnd",
       "direct_transition": "Terminal",
@@ -214,7 +235,7 @@
       },
       "distributed_transition": [
         {
-          "transition": "Discharge_to_Home",
+          "transition": "Resolve_Acute_Sepsis",
           "distribution": 0.6
         },
         {

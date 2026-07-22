@@ -733,6 +733,17 @@
       "exact": {
         "quantity": 0
       },
+      "direct_transition": "Resolve_VTE_Condition"
+    },
+    "Resolve_VTE_Condition": {
+      "type": "ConditionEnd",
+      "remarks": [
+        "Once anticoagulation is completed and symptoms have cleared, the acute VTE episode ",
+        "is resolved: end the DVT/PE condition (whichever presented, tracked in vte_condition) ",
+        "so it is not left permanently active on the problem list. Recurrent episodes re-open a ",
+        "fresh condition via DVT_Onset / PE_Onset."
+      ],
+      "referenced_by_attribute": "vte_condition",
       "direct_transition": "Recurrence_Wait"
     },
     "Terminal": {

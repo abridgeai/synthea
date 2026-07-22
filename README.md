@@ -4,6 +4,23 @@ Synthea<sup>TM</sup> is a Synthetic Patient Population Simulator. The goal is to
 
 Read our [wiki](https://github.com/synthetichealth/synthea/wiki) and [Frequently Asked Questions](https://github.com/synthetichealth/synthea/wiki/Frequently-Asked-Questions) for more information.
 
+## Abridge fork
+
+This repository is **Abridge's fork** of Synthea<sup>TM</sup>. The `master` branch tracks upstream
+MITRE; `abridge-main` is the fork's integration trunk and carries our enhancements:
+
+- **LLM-generated clinical notes & encounter transcripts** — realistic free-text notes and
+  doctor–patient transcripts generated per encounter via an OpenAI-compatible API, grounded in a
+  labeled-delta view of the structured record, with disk caching, a bounded concurrency pool, and
+  optional injection into the FHIR bundle (`src/main/java/org/mitre/synthea/export/llm/`).
+- **Increased patient complexity** — ~18 new disease modules, imaging (`ImagingStudy` +
+  `DiagnosticReport` with free-text impressions), and medication-realism fixes.
+- **US Core problem-list-item Conditions** — populates the US Core Problems view in FHIR R4 export.
+
+LLM export is **off by default** and makes paid API calls when enabled. For details on generating
+patients, tuning complexity, and the LLM feature, see
+`.claude/skills/synthea-patient-generation/SKILL.md` and `CLAUDE.md`.
+
 Currently, Synthea<sup>TM</sup> features include:
 - Birth to Death Lifecycle
 - Configuration-based statistics and demographics (defaults with Massachusetts Census data)

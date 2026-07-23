@@ -25,7 +25,7 @@ import org.mitre.synthea.helpers.Config;
 
 /**
  * Minimal client for an OpenAI-compatible Chat Completions API, used by the LLM-backed
- * exporters ({@link LlmClinicalNoteExporter} and {@link EncounterTranscriptExporter}).
+ * exporter ({@link LlmEncounterExporter}).
  *
  * <p>The API key is read from the {@code OPENAI_API_KEY} environment variable, falling back to
  * the {@code exporter.llm.api_key} config property. The key is never read from the committed

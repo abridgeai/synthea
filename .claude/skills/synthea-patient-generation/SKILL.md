@@ -107,8 +107,14 @@ record.
 - `LlmClient` — OkHttp+Gson; key from `OPENAI_API_KEY` env or `exporter.llm.api_key`; retries on
   429/5xx; **disk cache** keyed by `model + prompts`; sends **no** temperature/seed (natural
   variation); tracks API-call and token counts.
-- `LlmClinicalNoteExporter` / `EncounterTranscriptExporter` — `PatientExporter`s writing one file
-  per encounter to `output/notes_llm/` and `output/transcripts/`.
+- `LlmEncounterExporter` — single `PatientExporter` that, per encounter, generates the
+  **transcript first**, then the **note derived from that transcript** (+ the delta for factual
+  grounding), writing one file each to `output/transcripts/` and `output/notes_llm/`. This
+  transcript→note chaining makes the note's Subjective/HPI reflect what the patient said in the
+  conversation, so a transcript and its note are a faithful pair (they were previously two
+  independent generations from the same delta — factually consistent but narratively divergent).
+  If only the note is enabled (no transcript), the note is written from the delta alone. Hard
+  clinical facts always come only from the delta, never invented from the conversation.
 - `LlmStatsExporter` — `PostCompletionExporter` printing API-call/token totals after a run.
 - `FhirLlmNoteInjector` — `PostCompletionExporter` that re-reads each FHIR bundle and replaces the
   template note in the `DiagnosticReport`/`DocumentReference` with the LLM note (matched by
@@ -118,14 +124,14 @@ record.
 
 | Key | Purpose |
 |-----|---------|
-| `exporter.clinical_note.llm.export` | enable LLM notes |
-| `exporter.transcript.llm.export` | enable LLM transcripts |
+| `exporter.clinical_note.llm.export` | enable LLM notes (derived from the transcript when it is also enabled) |
+| `exporter.transcript.llm.export` | enable LLM transcripts (generated first; the note is chained off it) |
 | `exporter.fhir.llm.inject` | embed LLM notes/transcripts into the FHIR bundle (needs `exporter.fhir.export`) |
 | `exporter.llm.api_key` | API key (prefer the `OPENAI_API_KEY` env var; **never commit a key**) |
 | `exporter.llm.base_url` | API base; **region-locked keys need `https://us.api.openai.com/v1`** |
 | `exporter.llm.model` | model id |
 | `exporter.llm.cache` / `exporter.llm.cache_dir` | response cache (default `./output/llm_cache`) |
-| `exporter.llm.max_concurrent_requests` | global cap on in-flight LLM requests across all patients + both exporters (default 50; `1` = serial). LLM calls are I/O-bound, so this is decoupled from `generate.thread_pool_size` — see the parallelism note below |
+| `exporter.llm.max_concurrent_requests` | global cap on in-flight LLM requests across all patients and encounters (default 50; `1` = serial). Each encounter makes up to 2 sequential calls (transcript, then note). LLM calls are I/O-bound, so this is decoupled from `generate.thread_pool_size` — see the parallelism note below |
 
 There is **no sampling cap**: when enabled, a note/transcript is generated for **every encounter
 of the filtered record**, for every exported patient. Because the LLM exporters run on the *same*
